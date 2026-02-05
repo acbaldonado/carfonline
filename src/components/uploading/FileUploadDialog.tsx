@@ -36,7 +36,7 @@ export default function FileUploadDialog({
   const [isUploading, setIsUploading] = useState(false);
   const [progress, setProgress] = useState(0);
   const [newFiles, setNewFiles] = useState<File[]>([]);
-  
+  const BASE_URL = import.meta.env.VITE_API_BASE_URL || '';
   const addFilesWithoutDuplicates = (newFilesToAdd: File[]) => {
     setNewFiles((prev) => {
       const combined = [...prev, ...newFilesToAdd];
@@ -65,7 +65,7 @@ export default function FileUploadDialog({
 
     const fetchDriveFile = async () => {
       try {
-        const res = await fetch(`http://localhost:3001/api/drive-file/${selectedFile.id}`);
+        const res = await fetch(`${BASE_URL}/api/drive-file/${selectedFile.id}`);
         const blob = await res.blob();
         setPreviewUrl(URL.createObjectURL(blob));
       } catch (err) {
@@ -97,7 +97,7 @@ export default function FileUploadDialog({
     }
 
     try {
-      const response = await fetch(`http://localhost:3001/api/delete-file/${fileId}`, {
+      const response = await fetch(`${BASE_URL}/api/delete-file/${fileId}`, {
         method: 'DELETE',
         headers: {
           'Content-Type': 'application/json',
@@ -181,7 +181,7 @@ export default function FileUploadDialog({
         });
       }, 200);
 
-      const response = await fetch('http://localhost:3001/api/upload-files', {
+      const response = await fetch(`${BASE_URL}/api/upload-files`, {
         method: 'POST',
         body: formData,
       });

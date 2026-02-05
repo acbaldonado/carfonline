@@ -29,13 +29,14 @@ const SupportingDocumentsDialog: React.FC<SupportingDocumentsDialogProps> = ({
   const [fileDialogOpen, setFileDialogOpen] = useState(false);
   const [currentDocType, setCurrentDocType] = useState<keyof UploadedFiles | null>(null);
   const [loading, setLoading] = useState(false);
+  const BASE_URL = import.meta.env.VITE_API_BASE_URL || '';
 
   useEffect(() => {
     if (!isOpen || !gencode) return;
     const fetchFolderFiles = async () => {
       setLoading(true);
       try {
-        const res = await fetch(`http://localhost:3001/api/gencode/${gencode}`);
+        const res = await fetch(`${BASE_URL}/api/gencode/${gencode}`);
         const data = await res.json();
         setFolderFiles(data);
       } catch (err) {
@@ -150,7 +151,7 @@ const SupportingDocumentsDialog: React.FC<SupportingDocumentsDialogProps> = ({
             onFileUpload(currentDocType, files[0] || null);
             const fetchFolderFiles = async () => {
               try {
-                const res = await fetch(`http://localhost:3001/api/gencode/${gencode}`);
+                const res = await fetch(`${BASE_URL}/api/gencode/${gencode}`);
                 const data = await res.json();
                 setFolderFiles(data);
               } catch (err) {
