@@ -134,7 +134,6 @@ const CustomerList: React.FC<CustomerListProps> = ({ userId, onNewCustomer, onEd
       const hasAllCompanyAccess = userData?.allcompanyaccess || false;
       const userCompany = userData?.company || null;
 
-
       const res = await fetch(
         `https://sheets.googleapis.com/v4/spreadsheets/${sheetId}/values/${sheetRange}?key=${sheetApiKey}`
         
@@ -160,17 +159,33 @@ const CustomerList: React.FC<CustomerListProps> = ({ userId, onNewCustomer, onEd
         return status !== "APPROVED" && status !== "CANCELLED" && status !== "APPROVED" && status !== "RETURN TO MAKER";
       });
 
-      if (!hasAllAccess) {
-        filteredCustomers = filteredCustomers.filter((customer) => 
-          customer.maker === userId
-        );
-      }
+      // if (!hasAllAccess) {
+      //   filteredCustomers = filteredCustomers.filter((customer) => 
+      //     customer.maker === userId
+      //   );
+      // }
 
-      if (!hasAllCompanyAccess && userCompany) {
+      // if (!hasAllCompanyAccess && userCompany) {
+      //   filteredCustomers = filteredCustomers.filter((customer) => 
+      //     (customer.company || "").trim() === userCompany.trim()
+      //   );
+      // }
+      if (hasAllCompanyAccess) {
+      } else if (userCompany) {
         filteredCustomers = filteredCustomers.filter((customer) => 
-          (customer.company || "").trim() === userCompany.trim()
+          (customer.company || "").trim().toUpperCase() === userCompany.trim().toUpperCase()
         );
       }
+      if (!hasAllAccess) {
+      // User can only see records they created
+      filteredCustomers = filteredCustomers.filter((customer) => 
+        customer.maker === userId
+      );
+    } else {
+      console.log(filteredCustomers);
+      // User can see all records (within their company scope if applicable)
+      console.log('User has all access - showing all records');
+    }
 
       setCustomers(filteredCustomers);
     } catch (error) {
