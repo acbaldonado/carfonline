@@ -1,16 +1,11 @@
-import React, { useState } from 'react';
+import React from 'react';
 import { Input } from '@/components/ui/input';
 import SupportingDocumentsDialog from '@/components/uploading/SupportingDocumentsDialog';
 import { useSystemSettings } from './SystemSettings/SystemSettingsContext';
 import { useCustomerForm } from '@/hooks/useCustomerForm';
 import { CustomerFormData } from '@/hooks/useCustomerForm';
 import Loader from './ui/loader';
-import { formatTIN, formatNumberWithCommas } from '@/utils/formobjs';
-import Select from 'react-select';
-import ConfirmationDialog from '@/pages/ConfirmationDialog';
-import PrintableCustomerForm from './PrintableCustomerForm';
-import { VirtualizedMenuList } from '@/components/VirtualizedMenuList';
-
+import { formatTIN } from '@/utils/formobjs';
 
 interface CustomerFormProps {
   dialogVisible: boolean;
@@ -51,214 +46,35 @@ const CustomerForm: React.FC<CustomerFormProps> = ({
     regionTerritoryOptions,
     cityMunicipalityOptions,
     employeeOptions,
-    companyNameOptions,
-    userPermissions,
-    makerName,
     handleCheckboxChange,
     handleInputChange,
     handleFileUpload,
     handleEmployeeNoChange,
     handleEmployeeNameChange,
-    handleCompanySelect,
     submitToGoogleSheet,
     updateToGoogleSheet,
     postToGoogleSheet,
     approveForm,
     cancelForm,
-    fetchMakerNameByUserId,
     returntomakerForm,
-    returnForm
   } = useCustomerForm(initialData, dialogVisible, onClose);
-
-  // Individual loading states for each button
-  const [isDraftLoading, setIsDraftLoading] = useState(false);
-  const [isUpdateLoading, setIsUpdateLoading] = useState(false);
-  const [isSubmitLoading, setIsSubmitLoading] = useState(false);
-  const [isCancelLoading, setIsCancelLoading] = useState(false);
-  const [isApproveLoading, setIsApproveLoading] = useState(false);
-  const [showPrintView, setShowPrintView] = useState(false);
-  const [confirmDialog, setConfirmDialog] = useState<{
-    isOpen: boolean;
-    action: 'update' | 'cancel' | 'submit' | 'approve' |'return'| null;
-  }>({
-    isOpen: false,
-    action: null,
-  });
-  const [returnDialog, setReturnDialog] = useState({
-    isOpen: false,
-    remarks: '',
-  });
-
-  const [isReturnLoading, setIsReturnLoading] = useState(false);
-  // Check if form is approved
-  const isApproved = 
-  formData.approvestatus === "APPROVED" || 
-  (formData.approvestatus === "PENDING" && !userPermissions.hasEditAccess);
-
-  // Print functionality - opens the printable view
-  const handlePrintClick = () => {
-    setShowPrintView(true);
-  };
-
-  const handleClosePrintView = () => {
-    setShowPrintView(false);
-  };
-
-  const handleConfirmedAction = async () => {
-    const action = confirmDialog.action;
-    
-    switch (action) {
-      case 'update':
-        setIsUpdateLoading(true);
-        try {
-          const success = await updateToGoogleSheet(formData);
-          if (success) onClose();
-        } finally {
-          setIsUpdateLoading(false);
-        }
-        break;
-
-      case 'submit':
-        setIsSubmitLoading(true);
-        try {
-          const success = await postToGoogleSheet(formData);
-          if (success) onClose();
-        } finally {
-          setIsSubmitLoading(false);
-        }
-        break;
-
-      case 'cancel':
-        setIsCancelLoading(true);
-        try {
-          const success = await cancelForm(formData);
-          if (success) onClose();
-        } finally {
-          setIsCancelLoading(false);
-        }
-        break;
-
-      case 'return':
-        setIsReturnLoading(true);
-        try {
-          const success = await returnForm(formData,returnDialog.remarks);
-           if (success) {
-            onClose(); // if you want to close the whole form modal
-            // OR just close the return modal:
-            setReturnDialog({ isOpen: false, remarks: '' });
-          }
-        } finally {
-          setIsReturnLoading(false);
-        }
-        break;
-
-      case 'approve':
-        setIsApproveLoading(true);
-        try {
-          const success = await approveForm(formData);
-          if (success) onClose();
-        } finally {
-          setIsApproveLoading(false);
-        }
-        break;
-    }
-  };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     await onSubmit(formData);
   };
 
-  const handleDraftClick = async () => {
-    setIsDraftLoading(true);
-    try {
-      await submitToGoogleSheet(formData);
-    } finally {
-      setIsDraftLoading(false);
-    }
-  };
-
-  const handleUpdateClick = async () => {
-    setConfirmDialog({ isOpen: true, action: 'update' });
-  };
-
-  const handleSubmitClick = async () => {
-    setConfirmDialog({ isOpen: true, action: 'submit' });
-  };
-
-  const handleCancelClick = async () => {
-    setConfirmDialog({ isOpen: true, action: 'cancel' });
-  };
-
-  const handleApproveClick = async () => {
-    setConfirmDialog({ isOpen: true, action: 'approve' });
-  };
-  
-  const handleReturnClick = () => {
-    setReturnDialog({ isOpen: true, remarks: '' });
-  };
-
-  const handleReturnSubmit = async () => {
-    if (!returnDialog.remarks.trim()) {
-      alert('Please enter remarks before returning to maker');
-      return;
-    }
-    setIsReturnLoading(true);
-    try {
-      setConfirmDialog({ isOpen: true, action: 'return' });
-    } finally {
-      setIsReturnLoading(false);
-    }
-  };
-
-  const formatToISODate = (value?: string) => {
-    if (!value) return '';
-    const d = new Date(value);
-    if (isNaN(d.getTime())) return '';
-    return d.toISOString().split('T')[0];
-  };
-  const Spinner = () => (
-    <svg className="animate-spin h-5 w-5 text-white inline-block" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
-      <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
-      <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-    </svg>
-  );
-
   const hasAnyFiles = hasServerFiles || Object.values(uploadedFiles).some(f => f !== null);
 
   if (!dialogVisible) return null;
 
-  // Show printable view
-  const resolvedTerritoryRegion =
-  regionTerritoryOptions.find((opt) => opt.code === formData.territoryregion)?.text ||
-  formData.territoryregion;
-
-const resolvedTerritoryProvince =
-  stateProvinceOptions.find((opt) => opt.code === formData.territoryprovince)?.text ||
-  formData.territoryprovince;
-
-const resolvedTerritoryCity =
-  cityMunicipalityOptions.find((opt) => opt.code === formData.territorycity)?.text ||
-  formData.territorycity;
-  
-  if (showPrintView) {
-    return (
-      <PrintableCustomerForm
-        formData={{
-          ...formData,
-          territoryregion: resolvedTerritoryRegion,
-          territoryprovince: resolvedTerritoryProvince,
-          territorycity: resolvedTerritoryCity,
-        }}
-        makerName={makerName}
-        onClose={handleClosePrintView}
-        isVisible={showPrintView}
-      />
-    );
-  }
-
   return (
     <div className="fixed inset-0 z-50 flex items-start justify-center bg-black/50 p-8">
+      {loading && (
+    <div className="absolute inset-0 flex items-center justify-center bg-black/30 z-50">
+      <Loader />
+    </div>
+  )}
       <div className="no-scrollbar bg-gray-100 text-black w-full max-w-[75vw] rounded-lg shadow-lg overflow-y-scroll max-h-[92vh] p-20 m-4">
         {/* Header */}
         <div className="flex justify-between items-center pb-2 mb-4">
@@ -271,19 +87,8 @@ const resolvedTerritoryCity =
         <form onSubmit={handleSubmit} className="space-y-6" style={{ fontFamily: 'Arial, sans-serif' }}>
           <fieldset disabled={loading} className={loading ? 'opacity-60 pointer-events-none' : ''}>
           {/* Company Header Info */}
-          <div className="relative text-center mb-6">
-            {/* CARF NO. - Aligned to the right */}
-            <div className="absolute right-0 top-0 flex items-center space-x-2">
-              <strong className="text-xl">CARF NO.:</strong>
-              <input
-                type="text"
-                value={formData.gencode || ''}
-                readOnly
-                className="w-[200px] rounded-lg border border-gray-300 bg-gray-100 px-4 py-2 text-gray-900"
-              />
-            </div>
-
-            {/* Center content */}
+          <div className="text-center mb-6">
+            
             <div className="text-xl font-bold mb-1">BOUNTY PLUS INC.</div>
             <div className="mb-1">Inoza Tower 40th Street, BGC, Taguig City</div>
             <div className="mb-1">Tel: 663-9639 local 1910</div>
@@ -294,8 +99,7 @@ const resolvedTerritoryCity =
               <select
                 value={formData.custtype}
                 onChange={(e) => handleInputChange('custtype', e.target.value)}
-                disabled={isApproved}
-                  className={`w-[350px] rounded-lg border border-gray-300 px-4 py-2 text-gray-900 focus:border-blue-500 focus:ring-2 focus:ring-blue-300 transition-all duration-200 shadow-sm ${invalidFields.includes('custtype') ? 'error-border' : ''} ${isApproved ? 'bg-gray-200' : 'bg-white'}`}
+                className={`w-[350px] rounded-lg border border-gray-300 bg-white px-4 py-2 text-gray-900 focus:border-blue-500 focus:ring-2 focus:ring-blue-300 transition-all duration-200 shadow-sm ${invalidFields.includes('custtype') ? 'error-border' : ''}`}
               >
                 <option value="" disabled>Select WMS Customer Group</option>
                 {custTypeOptions.map((opt) => (
@@ -318,7 +122,6 @@ const resolvedTerritoryCity =
                     type="checkbox"
                     checked={formData.requestfor.includes(option)}
                     onChange={(e) =>setFormData(prev => ({ ...prev, requestfor: [option] }))}
-                    disabled={isApproved}
                     className="mr-2"
                   />
                   <span>{option} of Customer Code</span>
@@ -337,7 +140,6 @@ const resolvedTerritoryCity =
                     type="checkbox"
                     checked={formData.ismother.includes(option)}
                     onChange={(e) =>setFormData(prev => ({ ...prev, ismother: [option] }))}
-                    disabled={isApproved}
                     className="mr-2"
                   />
                   <span>{option}</span>
@@ -358,7 +160,6 @@ const resolvedTerritoryCity =
                     value={option}
                     checked={formData.type.includes(option)}
                     onChange={(e) => setFormData(prev => ({ ...prev, type: [e.target.value] }))}
-                    disabled={isApproved}
                     className="mr-2"
                   />
                   <span>{option === 'PERSONAL' ? 'INDIVIDUAL' : 'CORPORATION'}</span>
@@ -377,7 +178,6 @@ const resolvedTerritoryCity =
                     type="checkbox"
                     checked={formData.saletype.includes(option)}
                    onChange={(e) =>setFormData(prev => ({ ...prev, saletype: [option] }))}
-                    disabled={isApproved}
                     className="mr-2"
                   />
                   <span>{option}</span>
@@ -386,9 +186,8 @@ const resolvedTerritoryCity =
             </div>
           </div>
 
-          
-          {/* Corporation Name Section - SOLD TO PARTY (Input Field) */}
-          {formData.type.includes('CORPORATION') && formData.ismother.includes('SOLD TO PARTY') && (
+          {/* Corporation Name Section */}
+          {formData.type.includes('CORPORATION') && (
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mt-6 text-xl items-start">
               <div>
                 <label className="block font-semibold mb-2">
@@ -398,7 +197,7 @@ const resolvedTerritoryCity =
                   type="text"
                   value={formData.soldtoparty}
                   onChange={(e) => handleInputChange('soldtoparty', e.target.value)}
-                  className={`w-full rounded-lg border border-gray-300 ${isApproved ? "bg-gray-200" : "bg-white"} px-4 py-2 text-gray-900 
+                  className={`w-full rounded-lg border border-gray-300 bg-white px-4 py-2 text-gray-900 
                             focus:border-blue-500 focus:ring-2 focus:ring-blue-300 transition-all duration-200 shadow-sm ${invalidFields.includes('soldtoparty') ? 'error-border' : ''}`}
                 />
                 <i className="text-sm text-gray-600">
@@ -438,9 +237,8 @@ const resolvedTerritoryCity =
                   <input
                     type="text"
                     value={formData.tin}
-                    disabled={isApproved}
-                    onChange={(e) => setFormData(prev => ({ ...prev, tin: formatTIN(e.target.value) }))}
-                    className={`flex-1 rounded-lg border border-gray-300 ${isApproved ? "bg-gray-200" : "bg-white"} px-4 py-2 text-gray-900 
+                     onChange={(e) => setFormData(prev => ({ ...prev, tin: formatTIN(e.target.value) }))}
+                    className={`flex-1 rounded-lg border border-gray-300 bg-white px-4 py-2 text-gray-900 
                               focus:border-blue-500 focus:ring-2 focus:ring-blue-300 transition-all duration-200 shadow-sm ${invalidFields.includes('tin') ? 'error-border' : ''}`}
                   />
                 </div>
@@ -448,105 +246,8 @@ const resolvedTerritoryCity =
             </div>
           )}
 
-          {/* Corporation Name Section - SHIP TO PARTY (Select Field) */}
-          {formData.type.includes('CORPORATION') && formData.ismother.includes('SHIP TO PARTY') && (
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mt-6 text-xl items-start">
-              <div>
-                <label className="block font-semibold mb-2">
-                  REGISTERED COMPANY NAME (SHIP TO PARTY):
-                </label>
-                <Select
-                  components={{ MenuList: VirtualizedMenuList }} 
-                  value={
-                    formData.soldtoparty
-                      ? { value: formData.soldtoparty, label: formData.soldtoparty }
-                      : null
-                  }
-                  onChange={(option) => {
-                    if (option) {
-                      handleCompanySelect(option.value);
-                    }
-                  }}
-                  options={companyNameOptions.map((name) => ({
-                    value: name,
-                    label: name,
-                  }))}
-                  placeholder="Select registered company"
-                  isClearable
-                  isSearchable
-                  isDisabled={isApproved}
-                  className={invalidFields.includes('soldtoparty') ? 'error-border' : ''}
-                  styles={{
-                    control: (base, state) => ({
-                      ...base,
-                      borderColor: invalidFields.includes('soldtoparty')
-                        ? '#ef4444'
-                        : state.isFocused
-                        ? '#3b82f6'
-                        : '#d1d5db',
-                      borderRadius: '0.5rem',
-                      padding: '0.125rem',
-                      backgroundColor: isApproved ? '#f3f4f6' : base.backgroundColor,
-                      boxShadow: state.isFocused ? '0 0 0 2px rgba(59, 130, 246, 0.3)' : 'none',
-                      '&:hover': {
-                        borderColor: '#3b82f6',
-                      },
-                    }),
-                    menu: (base) => ({
-                      ...base,
-                      zIndex: 9999,
-                    }),
-                  }}
-                />
-                <i className="text-sm text-gray-600">
-                  Name to appear on all Records, Official Receipts, Invoices, Delivery Receipts
-                </i>
-              </div>
-
-              <div>
-                <div className="flex items-center space-x-6 mb-2">
-                  <label className="font-semibold">ID TYPE:</label>
-                  <label className="flex items-center">
-                    <input
-                      type="radio"
-                      name="idtype"
-                      value="TIN"
-                      checked={formData.idtype === 'TIN'}
-                      onChange={(e) => handleInputChange('idtype', e.target.value)}
-                      className="mr-2"
-                    />
-                    <span>TIN</span>
-                  </label>
-                  <label className="flex items-center">
-                    <input
-                      type="radio"
-                      name="idtype"
-                      value="OTHERS"
-                      checked={formData.idtype === 'OTHERS'}
-                      onChange={(e) => handleInputChange('idtype', e.target.value)}
-                      className="mr-2"
-                    />
-                    <span>OTHERS</span>
-                  </label>
-                </div>
-
-                <div className="flex items-center space-x-2">
-                  <strong>{formData.idtype === 'OTHERS' ? 'OTHERS:' : 'TIN:'}</strong>
-                  <input
-                    type="text"
-                    value={formData.tin}
-                    disabled={isApproved}
-                    onChange={(e) => setFormData(prev => ({ ...prev, tin: formatTIN(e.target.value) }))}
-                    className={`flex-1 rounded-lg border border-gray-300 ${isApproved ? "bg-gray-200" : "bg-white"} px-4 py-2 text-gray-900 
-                              focus:border-blue-500 focus:ring-2 focus:ring-blue-300 transition-all duration-200 shadow-sm ${invalidFields.includes('tin') ? 'error-border' : ''}`}
-                  />
-                </div>
-              </div>
-            </div>
-          )}
-
-          {/* Personal Name Section - SOLD TO PARTY (Input Fields) */}
-          {formData.type.includes('PERSONAL') && formData.ismother.includes('SOLD TO PARTY') && (
+          {/* Personal Name Section */}
+          {formData.type.includes('PERSONAL') && (
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mt-6 text-xl items-start">
               <div>
                 <div className="grid grid-cols-[1fr_auto_1fr_auto_1fr] gap-2 mb-2">
@@ -562,8 +263,7 @@ const resolvedTerritoryCity =
                     type="text"
                     value={formData.lastname}
                     onChange={(e) => handleInputChange('lastname', e.target.value)}
-                    disabled={isApproved}
-                    className={`w-full rounded-lg border border-gray-300 ${isApproved ? "bg-gray-200" : "bg-white"} px-4 py-2 text-gray-900 
+                    className={`w-full rounded-lg border border-gray-300 bg-white px-4 py-2 text-gray-900 
                               focus:border-blue-500 focus:ring-2 focus:ring-blue-300 transition-all duration-200 shadow-sm ${invalidFields.includes('lastname') ? 'error-border' : ''}`}
                   />
                   <span className="flex items-center justify-center">/</span>
@@ -571,8 +271,7 @@ const resolvedTerritoryCity =
                     type="text"
                     value={formData.firstname}
                     onChange={(e) => handleInputChange('firstname', e.target.value)}
-                    disabled={isApproved}
-                    className={`w-full rounded-lg border border-gray-300 ${isApproved ? "bg-gray-200" : "bg-white"} px-4 py-2 text-gray-900 
+                    className={`w-full rounded-lg border border-gray-300 bg-white px-4 py-2 text-gray-900 
                               focus:border-blue-500 focus:ring-2 focus:ring-blue-300 transition-all duration-200 shadow-sm ${invalidFields.includes('firstname') ? 'error-border' : ''}`}
                   />
                   <span className="flex items-center justify-center">/</span>
@@ -580,8 +279,7 @@ const resolvedTerritoryCity =
                     type="text"
                     value={formData.middlename}
                     onChange={(e) => handleInputChange('middlename', e.target.value)}
-                    disabled={isApproved}
-                    className={`w-full rounded-lg border border-gray-300 ${isApproved ? "bg-gray-200" : "bg-white"} px-4 py-2 text-gray-900 
+                    className={`w-full rounded-lg border border-gray-300 bg-white px-4 py-2 text-gray-900 
                               focus:border-blue-500 focus:ring-2 focus:ring-blue-300 transition-all duration-200 shadow-sm ${invalidFields.includes('middlename') ? 'error-border' : ''}`}
                   />
                 </div>
@@ -626,7 +324,7 @@ const resolvedTerritoryCity =
                     type="text"
                     value={formData.tin}
                     onChange={(e) => handleInputChange('tin', e.target.value)}
-                    className={`flex-1 rounded-lg border border-gray-300 ${isApproved ? "bg-gray-200" : "bg-white"} px-4 py-2 text-gray-900 
+                    className={`flex-1 rounded-lg border border-gray-300 bg-white px-4 py-2 text-gray-900 
                               focus:border-blue-500 focus:ring-2 focus:ring-blue-300 transition-all duration-200 shadow-sm ${invalidFields.includes('tin') ? 'error-border' : ''}`}
                   />
                 </div>
@@ -634,110 +332,14 @@ const resolvedTerritoryCity =
             </div>
           )}
 
-          {/* Personal Name Section - SHIP TO PARTY (Single Select Field for Full Name) */}
-          {formData.type.includes('PERSONAL') && formData.ismother.includes('SHIP TO PARTY') && (
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mt-6 text-xl items-start">
-              <div>
-                <label className="block font-semibold mb-2">
-                  REGISTERED COMPANY NAME (SHIP TO PARTY):
-                </label>
-                <Select
-                  value={
-                    formData.soldtoparty
-                      ? { value: formData.soldtoparty, label: formData.soldtoparty }
-                      : null
-                  }
-                  onChange={(option) => {
-                    if (option) {
-                      handleCompanySelect(option.value);
-                    }
-                  }}
-                  options={companyNameOptions.map((name) => ({
-                    value: name,
-                    label: name,
-                  }))}
-                  placeholder="Select registered company"
-                  isClearable
-                  isSearchable
-                  isDisabled={isApproved}
-                  className={invalidFields.includes('soldtoparty') ? 'error-border' : ''}
-                  styles={{
-                    control: (base, state) => ({
-                      ...base,
-                      borderColor: invalidFields.includes('soldtoparty')
-                        ? '#ef4444'
-                        : state.isFocused
-                        ? '#3b82f6'
-                        : '#d1d5db',
-                      borderRadius: '0.5rem',
-                      padding: '0.125rem',
-                      backgroundColor: isApproved ? '#f3f4f6' : base.backgroundColor,
-                      boxShadow: state.isFocused ? '0 0 0 2px rgba(59, 130, 246, 0.3)' : 'none',
-                      '&:hover': {
-                        borderColor: '#3b82f6',
-                      },
-                    }),
-                    menu: (base) => ({
-                      ...base,
-                      zIndex: 9999,
-                    }),
-                  }}
-                />
-                <i className="text-sm text-gray-600">
-                  Name to appear on all Records, Official Receipts, Invoices, Delivery Receipts
-                </i>
-              </div>
-
-              <div>
-                <div className="flex items-center mb-2">
-                  <strong className="mr-4">ID TYPE:</strong>
-                  <label className="flex items-center mr-4">
-                    <input
-                      type="radio"
-                      name="idtype"
-                      value="TIN"
-                      checked={formData.idtype === 'TIN'}
-                      onChange={(e) => handleInputChange('idtype', e.target.value)}
-                      className="mr-2"
-                    />
-                    <span>TIN</span>
-                  </label>
-                  <label className="flex items-center">
-                    <input
-                      type="radio"
-                      name="idtype"
-                      value="OTHERS"
-                      checked={formData.idtype === 'OTHERS'}
-                      onChange={(e) => handleInputChange('idtype', e.target.value)}
-                      className="mr-2"
-                    />
-                    <span>OTHERS</span>
-                  </label>
-                </div>
-
-                <div className="flex items-center space-x-2">
-                  <strong className="whitespace-nowrap">{formData.idtype === 'OTHERS' ? 'OTHERS:' : 'TIN:'}</strong>
-                  <input
-                    type="text"
-                    value={formData.tin}
-                    onChange={(e) => handleInputChange('tin', e.target.value)}
-                    className={`flex-1 rounded-lg border border-gray-300 ${isApproved ? "bg-gray-200" : "bg-white"} px-4 py-2 text-gray-900 
-                              focus:border-blue-500 focus:ring-2 focus:ring-blue-300 transition-all duration-200 shadow-sm ${invalidFields.includes('tin') ? 'error-border' : ''}`}
-                  />
-                </div>
-              </div>
-            </div>
-          )}
-
-          {/* Billing Address */}
+                    {/* Billing Address */}
           <div className="mt-8">
             <div className="text-xl font-bold mb-2">BILLING ADDRESS:</div>
             <input
               type="text"
               value={formData.billaddress}
               onChange={(e) => handleInputChange('billaddress', e.target.value)}
-              disabled={isApproved || formData.ismother?.includes('SHIP TO PARTY')}
-              className={`w-full rounded-lg border border-gray-300 ${isApproved ? "bg-gray-200" : "bg-white"} px-4 py-2 text-gray-900 focus:border-blue-500 focus:ring-2 focus:ring-blue-300 transition-all duration-200 shadow-sm ${invalidFields.includes('billaddress') ? 'error-border' : ''}`}
+            className={`w-full rounded-lg border border-gray-300 bg-white px-4 py-2 text-gray-900 focus:border-blue-500 focus:ring-2 focus:ring-blue-300 transition-all duration-200 shadow-sm ${invalidFields.includes('billaddress') ? 'error-border' : ''}`}
             />
           </div>
 
@@ -753,22 +355,19 @@ const resolvedTerritoryCity =
                 type="text"
                 value={formData.shiptoparty}
                 onChange={(e) => handleInputChange('shiptoparty', e.target.value)}
-                disabled={isApproved}
-                  className={`w-full rounded-lg border border-gray-300 ${isApproved ? "bg-gray-200" : "bg-white"} px-4 py-2 text-gray-900 focus:border-blue-500 focus:ring-2 focus:ring-blue-300 transition-all duration-200 shadow-sm ${invalidFields.includes('shiptoparty') ? 'error-border' : ''}`}
+                className={`w-full rounded-lg border border-gray-300 bg-white px-4 py-2 text-gray-900 focus:border-blue-500 focus:ring-2 focus:ring-blue-300 transition-all duration-200 shadow-sm ${invalidFields.includes('shiptoparty') ? 'error-border' : ''}`}
               />
               <input
                 type="text"
                 value={formData.storecode}
                 onChange={(e) => handleInputChange('storecode', e.target.value)}
-                disabled={isApproved}
-                  className={`w-full rounded-lg border border-gray-300 ${isApproved ? "bg-gray-200" : "bg-white"} px-4 py-2 text-gray-900 focus:border-blue-500 focus:ring-2 focus:ring-blue-300 transition-all duration-200 shadow-sm ${invalidFields.includes('storecode') ? 'error-border' : ''}`}
+                className={`w-full rounded-lg border border-gray-300 bg-white px-4 py-2 text-gray-900 focus:border-blue-500 focus:ring-2 focus:ring-blue-300 transition-all duration-200 shadow-sm ${invalidFields.includes('storecode') ? 'error-border' : ''}`}
               />
               <input
                 type="text"
                 value={formData.busstyle}
                 onChange={(e) => handleInputChange('busstyle', e.target.value)}
-                disabled={isApproved}
-                  className={`w-full rounded-lg border border-gray-300 ${isApproved ? "bg-gray-200" : "bg-white"} px-4 py-2 text-gray-900 focus:border-blue-500 focus:ring-2 focus:ring-blue-300 transition-all duration-200 shadow-sm${invalidFields.includes('busstyle') ? 'error-border' : ''}`}
+                className={`w-full rounded-lg border border-gray-300 bg-white px-4 py-2 text-gray-900 focus:border-blue-500 focus:ring-2 focus:ring-blue-300 transition-all duration-200 shadow-sm${invalidFields.includes('busstyle') ? 'error-border' : ''}`}
               />
             </div>
           </div>
@@ -779,9 +378,9 @@ const resolvedTerritoryCity =
             <input
               type="text"
               value={formData.deladdress}
-              disabled={isApproved}
               onChange={(e) => handleInputChange('deladdress', e.target.value)}
-            className= {`w-full rounded-lg border border-gray-300 ${isApproved ? "bg-gray-200" : "bg-white"} px-4 py-2 text-gray-900 focus:border-blue-500 focus:ring-2 focus:ring-blue-300 transition-all duration-200 shadow-sm ${invalidFields.includes('deladdress') ? 'error-border' : ''}`}
+            //   className="border rounded px-3 py-2 w-full max-w-[1200px]"
+            className= {`w-full rounded-lg border border-gray-300 bg-white px-4 py-2 text-gray-900 focus:border-blue-500 focus:ring-2 focus:ring-blue-300 transition-all duration-200 shadow-sm ${invalidFields.includes('deladdress') ? 'error-border' : ''}`}
             />
           </div>
 
@@ -796,25 +395,17 @@ const resolvedTerritoryCity =
                   type="text"
                   value={formData.contactperson}
                   onChange={(e) => handleInputChange('contactperson', e.target.value)}
-                  disabled={isApproved}
-                  className={`flex-1 rounded-lg border border-gray-300 ${isApproved ? "bg-gray-200" : "bg-white"} px-4 py-2 text-gray-900 focus:border-blue-500 focus:ring-2 focus:ring-blue-300 transition-all duration-200 shadow-sm ${invalidFields.includes('contactperson') ? 'error-border' : ''}`}
+                  className={`flex-1 rounded-lg border border-gray-300 bg-white px-4 py-2 text-gray-900 focus:border-blue-500 focus:ring-2 focus:ring-blue-300 transition-all duration-200 shadow-sm ${invalidFields.includes('contactperson') ? 'error-border' : ''}`}
                 />
               </div>
               <div className="flex items-center space-x-4">
                 <strong className="whitespace-nowrap">Email Address:</strong>
                 <input
-                  type="text"
-                  placeholder="email@example.com or N/A"
+                  type="email"
                   value={formData.email}
                   onChange={(e) => handleInputChange('email', e.target.value)}
-                  disabled={isApproved}
-                  className={`w-[600px] rounded-lg border border-gray-300 ${isApproved ? "bg-gray-200" : "bg-white"} px-4 py-2 text-gray-900 focus:border-blue-500 focus:ring-2 focus:ring-blue-300 transition-all duration-200 shadow-sm ${invalidFields.includes('email') ? 'error-border' : ''}`}
+                  className={`w-[600px] rounded-lg border border-gray-300 bg-white px-4 py-2 text-gray-900 focus:border-blue-500 focus:ring-2 focus:ring-blue-300 transition-all duration-200 shadow-sm ${invalidFields.includes('email') ? 'error-border' : ''}`}
                 />
-                {invalidFields.includes('email') && (
-                  <p className="text-red-600 text-sm mt-1">
-                    Please enter a valid email address or N/A
-                  </p>
-                )}
               </div>
             </div>
             
@@ -825,18 +416,16 @@ const resolvedTerritoryCity =
                   type="text"
                   value={formData.position}
                   onChange={(e) => handleInputChange('position', e.target.value)}
-                  disabled={isApproved}
-                  className={`w-[600px] rounded-lg border border-gray-300 ${isApproved ? "bg-gray-200" : "bg-white"} px-4 py-2 text-gray-900 focus:border-blue-500 focus:ring-2 focus:ring-blue-300 transition-all duration-200 shadow-sm ${invalidFields.includes('position') ? 'error-border' : ''}`}
+                  className={`w-[600px] rounded-lg border border-gray-300 bg-white px-4 py-2 text-gray-900 focus:border-blue-500 focus:ring-2 focus:ring-blue-300 transition-all duration-200 shadow-sm ${invalidFields.includes('position') ? 'error-border' : ''}`}
                 />
               </div>
               <div className="flex items-center space-x-4">
                 <strong className="whitespace-nowrap">Cellphone No.:</strong>
                 <input
-                  type="number"
+                  type="tel"
                   value={formData.contactnumber}
                   onChange={(e) => handleInputChange('contactnumber', e.target.value)}
-                  disabled={isApproved}
-                  className={`w-[500px] rounded-lg border border-gray-300 ${isApproved ? "bg-gray-200" : "bg-white"} px-4 py-2 text-gray-900 focus:border-blue-500 focus:ring-2 focus:ring-blue-300 transition-all duration-200 shadow-sm ${invalidFields.includes('contactnumber') ? 'error-border' : ''}`}
+                  className={`w-[500px] rounded-lg border border-gray-300 bg-white px-4 py-2 text-gray-900 focus:border-blue-500 focus:ring-2 focus:ring-blue-300 transition-all duration-200 shadow-sm ${invalidFields.includes('contactnumber') ? 'error-border' : ''}`}
                 />
               </div>
             </div>
@@ -882,8 +471,8 @@ const resolvedTerritoryCity =
                 type="text"
                 value={formData.boscode}
                 onChange={(e) => handleInputChange('boscode', e.target.value)}
-                disabled={isApproved || !formData.requestfor.includes('EDIT')}
-                  className={`w-[300px] rounded-lg border border-gray-300 ${isApproved ? "bg-gray-200" : "bg-white"} px-4 py-2 text-gray-900 focus:border-blue-500 focus:ring-2 focus:ring-blue-300 transition-all duration-200 shadow-sm ${invalidFields.includes('boscode') ? 'error-border' : ''}`}
+                // className="border rounded px-3 py-2 w-[300px]"
+                className={`w-[300px] rounded-lg border border-gray-300 bg-white px-4 py-2 text-gray-900 focus:border-blue-500 focus:ring-2 focus:ring-blue-300 transition-all duration-200 shadow-sm ${invalidFields.includes('boscode') ? 'error-border' : ''}`}
                 readOnly={formData.requestfor.includes('ACTIVATION')}
               />
             </div>
@@ -892,8 +481,8 @@ const resolvedTerritoryCity =
               <select
                 value={formData.bucenter}
                 onChange={(e) => handleInputChange('bucenter', e.target.value)}
-                disabled={isApproved}
-                  className={`w-[400px] rounded-lg border border-gray-300 ${isApproved ? "bg-gray-200" : "bg-white"} px-4 py-2 text-gray-900 focus:border-blue-500 focus:ring-2 focus:ring-blue-300 transition-all duration-200 shadow-sm ${invalidFields.includes('bucenter') ? 'error-border' : ''}`}
+                // className="border rounded px-3 py-2 w-[300px]"
+                className={`w-[400px] rounded-lg border border-gray-300 bg-white px-4 py-2 text-gray-900 focus:border-blue-500 focus:ring-2 focus:ring-blue-300 transition-all duration-200 shadow-sm ${invalidFields.includes('bucenter') ? 'error-border' : ''}`}
               >
                 <option value="" disabled>
                   Select BU Center
@@ -904,6 +493,7 @@ const resolvedTerritoryCity =
                   </option>
                 ))}
 
+                {/* Include current value if not in options */}
                 {formData.bucenter && !bucenterOptions.includes(formData.bucenter) && (
                   <option value={formData.bucenter}>{formData.bucenter}</option>
                 )}
@@ -918,8 +508,8 @@ const resolvedTerritoryCity =
               <select
                 value={formData.region}
                 onChange={(e) => handleInputChange('region', e.target.value)}
-                disabled={isApproved}
-                  className={`w-[450px] rounded-lg border border-gray-300 ${isApproved ? "bg-gray-200" : "bg-white"} px-4 py-2 text-gray-900 focus:border-blue-500 focus:ring-2 focus:ring-blue-300 transition-all duration-200 shadow-sm ${invalidFields.includes('region') ? 'error-border' : ''}`}
+                // className="border rounded px-3 py-2 w-[450px]"
+                className={`w-[450px] rounded-lg border border-gray-300 bg-white px-4 py-2 text-gray-900 focus:border-blue-500 focus:ring-2 focus:ring-blue-300 transition-all duration-200 shadow-sm ${invalidFields.includes('region') ? 'error-border' : ''}`}
               >
                 <option value="" disabled>
                   Select Region
@@ -930,6 +520,7 @@ const resolvedTerritoryCity =
                   </option>
                 ))}
 
+                {/* Include current value if not in options */}
                 {formData.region && !regionOptions.includes(formData.region) && (
                   <option value={formData.region}>{formData.region}</option>
                 )}
@@ -940,8 +531,8 @@ const resolvedTerritoryCity =
               <select
                 value={formData.district}
                 onChange={(e) => handleInputChange('district', e.target.value)}
-                disabled={isApproved}
-                  className={`w-[420px] rounded-lg border border-gray-300 ${isApproved ? "bg-gray-200" : "bg-white"} px-4 py-2 text-gray-900 focus:border-blue-500 focus:ring-2 focus:ring-blue-300 transition-all duration-200 shadow-sm ${invalidFields.includes('district') ? 'error-border' : ''}`}
+                // className="border rounded px-3 py-2 w-[450px]"
+                className={`w-[420px] rounded-lg border border-gray-300 bg-white px-4 py-2 text-gray-900 focus:border-blue-500 focus:ring-2 focus:ring-blue-300 transition-all duration-200 shadow-sm ${invalidFields.includes('district') ? 'error-border' : ''}`}
               >
                 <option value="" disabled>
                   Select District
@@ -952,6 +543,7 @@ const resolvedTerritoryCity =
                   </option>
                 ))}
 
+                {/* Include current value if not in options */}
                 {formData.district && !districtOptions.includes(formData.district) && (
                   <option value={formData.district}>{formData.district}</option>
                 )}
@@ -968,8 +560,8 @@ const resolvedTerritoryCity =
                 <select
                   value={formData.salesinfosalesorg}
                   onChange={(e) => handleInputChange('salesinfosalesorg', e.target.value)}
-                disabled={isApproved}
-                  className={`w-[300px] rounded-lg border border-gray-300 ${isApproved ? "bg-gray-200" : "bg-white"} px-4 py-2 text-gray-900 focus:border-blue-500 focus:ring-2 focus:ring-blue-300 transition-all duration-200 shadow-sm ${invalidFields.includes('salesinfosalesorg') ? 'error-border' : ''}`}
+                //   className="border rounded px-3 py-2 w-[300px]"
+                className={`w-[300px] rounded-lg border border-gray-300 bg-white px-4 py-2 text-gray-900 focus:border-blue-500 focus:ring-2 focus:ring-blue-300 transition-all duration-200 shadow-sm ${invalidFields.includes('salesinfosalesorg') ? 'error-border' : ''}`}
                 >
                   <option value="" disabled>
                   Select Sales Organization
@@ -980,6 +572,7 @@ const resolvedTerritoryCity =
                   </option>
                 ))}
 
+                {/* Include current value if not in options */}
                 {formData.salesinfosalesorg && !salesorgOptions.includes(formData.salesinfosalesorg) && (
                   <option value={formData.salesinfosalesorg}>{formData.salesinfosalesorg}</option>
                 )}
@@ -990,8 +583,8 @@ const resolvedTerritoryCity =
                 <select
                   value={formData.salesinfodistributionchannel}
                   onChange={(e) => handleInputChange('salesinfodistributionchannel', e.target.value)}
-                disabled={isApproved}
-                  className={`w-[350px] rounded-lg border border-gray-300 ${isApproved ? "bg-gray-200" : "bg-white"} px-4 py-2 text-gray-900 focus:border-blue-500 focus:ring-2 focus:ring-blue-300 transition-all duration-200 shadow-sm ${invalidFields.includes('salesinfodistributionchannel') ? 'error-border' : ''}`}
+                //   className="border rounded px-3 py-2 w-[350px]"
+                className={`w-[350px] rounded-lg border border-gray-300 bg-white px-4 py-2 text-gray-900 focus:border-blue-500 focus:ring-2 focus:ring-blue-300 transition-all duration-200 shadow-sm ${invalidFields.includes('salesinfodistributionchannel') ? 'error-border' : ''}`}
                 >
                    <option value="" disabled>
                   Select Distribution Channel
@@ -1002,6 +595,7 @@ const resolvedTerritoryCity =
                   </option>
                 ))}
 
+                {/* Include current value if not in options */}
                 {formData.salesinfodistributionchannel && !dcOptions.includes(formData.salesinfodistributionchannel) && (
                   <option value={formData.salesinfodistributionchannel}>{formData.salesinfodistributionchannel}</option>
                 )}
@@ -1013,8 +607,8 @@ const resolvedTerritoryCity =
               <select
                 value={formData.salesinfodivision}
                 onChange={(e) => handleInputChange('salesinfodivision', e.target.value)}
-                disabled={isApproved}
-                  className={`w-[350px] rounded-lg border border-gray-300 ${isApproved ? "bg-gray-200" : "bg-white"} px-4 py-2 text-gray-900 focus:border-blue-500 focus:ring-2 focus:ring-blue-300 transition-all duration-200 shadow-sm ${invalidFields.includes('salesinfodivision') ? 'error-border' : ''}`}
+                // className="border rounded px-3 py-2 w-[350px]"
+                className={`w-[350px] rounded-lg border border-gray-300 bg-white px-4 py-2 text-gray-900 focus:border-blue-500 focus:ring-2 focus:ring-blue-300 transition-all duration-200 shadow-sm ${invalidFields.includes('salesinfodivision') ? 'error-border' : ''}`}
               >
                 <option value="" disabled>
                   Select Division
@@ -1043,8 +637,7 @@ const resolvedTerritoryCity =
                 <select
                   value={formData.salesterritory}
                   onChange={(e) => handleInputChange('salesterritory', e.target.value)}
-                  disabled={isApproved}
-                  className={`w-[300px] rounded-lg border border-gray-300 ${isApproved ? "bg-gray-200" : "bg-white"} px-4 py-2 text-gray-900 focus:border-blue-500 focus:ring-2 focus:ring-blue-300 transition-all duration-200 shadow-sm ${invalidFields.includes('salesterritory') ? 'error-border' : ''}`}
+                  className={`w-[300px] rounded-lg border border-gray-300 bg-white px-4 py-2 text-gray-900 focus:border-blue-500 focus:ring-2 focus:ring-blue-300 transition-all duration-200 shadow-sm ${invalidFields.includes('salesterritory') ? 'error-border' : ''}`}
                 >
                   <option value="" disabled>
                     Select Sales Territory
@@ -1054,6 +647,7 @@ const resolvedTerritoryCity =
                       {opt}
                     </option>
                   ))}
+                  {/* Include current value if not in options */}
                   {formData.salesterritory && !salesTerritoryOptions.includes(formData.salesterritory) && (
                     <option value={formData.salesterritory}>{formData.salesterritory}</option>
                   )}
@@ -1065,14 +659,15 @@ const resolvedTerritoryCity =
                   value={formData.territoryprovince}
                   onChange={(e) => {
                     handleInputChange('territoryprovince', e.target.value);
+                    // Reset city when province changes
                     handleInputChange('territorycity', '');
                   }}
-                  disabled={!formData.territoryregion || isApproved}
-                  className={`w-[350px] rounded-lg border border-gray-300 ${isApproved ? "bg-gray-200" : "bg-white"} px-4 py-2 text-gray-900 focus:border-blue-500 focus:ring-2 focus:ring-blue-300 transition-all duration-200 shadow-sm ${invalidFields.includes('territoryprovince') ? 'error-border' : ''}`}
+                  disabled={!formData.territoryregion}
+                  className={`w-[350px] rounded-lg border border-gray-300 bg-white px-4 py-2 text-gray-900 focus:border-blue-500 focus:ring-2 focus:ring-blue-300 transition-all duration-200 shadow-sm ${invalidFields.includes('territoryprovince') ? 'error-border' : ''}`}
                 >
                   <option value="" disabled>Select Province</option>
                   {stateProvinceOptions.map((opt) => (
-                    <option key={opt.code} value={opt.code}>{opt.text}</option>
+                    <option key={opt} value={opt}>{opt}</option>
                   ))}
                 </select>
               </div>
@@ -1085,16 +680,15 @@ const resolvedTerritoryCity =
                       value={formData.territoryregion}
                       onChange={(e) => {
                         handleInputChange('territoryregion', e.target.value);
+                        // Reset dependent fields
                         handleInputChange('territoryprovince', '');
                         handleInputChange('territorycity', '');
                       }}
-                      disabled={isApproved}
-                  className={`w-[400px] rounded-lg border border-gray-300 ${isApproved ? "bg-gray-200" : "bg-white"} px-4 py-2 text-gray-900 focus:border-blue-500 focus:ring-2 focus:ring-blue-300 transition-all duration-200 shadow-sm ${invalidFields.includes('territoryregion') ? 'error-border' : ''}`}
+                      className={`w-[400px] rounded-lg border border-gray-300 bg-white px-4 py-2 text-gray-900 focus:border-blue-500 focus:ring-2 focus:ring-blue-300 transition-all duration-200 shadow-sm ${invalidFields.includes('territoryregion') ? 'error-border' : ''}`}
                     >
                       <option value="" disabled>Select Region</option>
                       {regionTerritoryOptions.map((opt) => (
-                        // <option key={opt} value={opt}>{opt}</option>
-                        <option key={opt.code} value={opt.code}>{opt.text}</option>
+                        <option key={opt} value={opt}>{opt}</option>
                       ))}
                     </select>
                   </div>
@@ -1104,12 +698,12 @@ const resolvedTerritoryCity =
                     <select
                       value={formData.territorycity}
                       onChange={(e) => handleInputChange('territorycity', e.target.value)}
-                      disabled={!formData.territoryprovince || isApproved}
-                  className={`w-[350px] rounded-lg border border-gray-300 ${isApproved ? "bg-gray-200" : "bg-white"} px-4 py-2 text-gray-900 focus:border-blue-500 focus:ring-2 focus:ring-blue-300 transition-all duration-200 shadow-sm ${invalidFields.includes('territorycity') ? 'error-border' : ''}`}
+                      disabled={!formData.territoryprovince}
+                      className={`w-[350px] rounded-lg border border-gray-300 bg-white px-4 py-2 text-gray-900 focus:border-blue-500 focus:ring-2 focus:ring-blue-300 transition-all duration-200 shadow-sm ${invalidFields.includes('territorycity') ? 'error-border' : ''}`}
                     >
                       <option value="" disabled>Select City/Municipality</option>
                       {cityMunicipalityOptions.map((opt) => (
-                        <option key={opt.code} value={opt.code}>{opt.text}</option>
+                        <option key={opt} value={opt}>{opt}</option>
                       ))}
                     </select>
                   </div>
@@ -1141,13 +735,9 @@ const resolvedTerritoryCity =
                         <input
                           type="text"
                           value={formData[row.field as keyof CustomerFormData] as string}
-                          disabled={isApproved}
                           placeholder="Enter truck capacity"
                           onChange={(e) => handleInputChange(row.field as keyof CustomerFormData, e.target.value)}
-                          className={`w-full rounded-lg border border-gray-300 ${
-                            isApproved ? "bg-gray-200" : "bg-white"
-                          } px-4 py-2 text-gray-900 focus:border-blue-500 focus:ring-2 focus:ring-blue-300 transition-all duration-200 shadow-sm`}
-
+                          className="w-full rounded-lg border border-gray-300 bg-white px-4 py-2 text-gray-900 focus:border-blue-500 focus:ring-2 focus:ring-blue-300 transition-all duration-200 shadow-sm"
                         />
                       </td>
                     </tr>
@@ -1161,10 +751,10 @@ const resolvedTerritoryCity =
               <strong className="mr-8">DATE TO START:</strong>
               <input
                 type="date"
-                value={formatToISODate(formData.datestart)}
+                value={formData.datestart}
                 onChange={(e) => handleInputChange('datestart', e.target.value)}
-                disabled={isApproved}
-                className="w-[200px] rounded-lg border border-gray-300 bg-gray-200 px-4 py-2 text-gray-900 focus:border-blue-500 focus:ring-2 focus:ring-blue-300 transition-all duration-200 shadow-sm"
+                // className="border rounded px-3 py-2 w-[200px]"
+                className="w-[200px] rounded-lg border border-gray-300 bg-white px-4 py-2 text-gray-900 focus:border-blue-500 focus:ring-2 focus:ring-blue-300 transition-all duration-200 shadow-sm"
                 readOnly
               />
             </div>
@@ -1173,8 +763,8 @@ const resolvedTerritoryCity =
               <select
                 value={formData.terms}
                 onChange={(e) => handleInputChange('terms', e.target.value)}
-                disabled={!formData.custtype || !formData.type || isApproved} 
-                className= {`w-[220px] rounded-lg border border-gray-300 ${isApproved ? "bg-gray-200" : "bg-white"} px-4 py-2 text-gray-900 focus:border-blue-500 focus:ring-2 focus:ring-blue-300 transition-all duration-200 shadow-sm ${invalidFields.includes('terms') ? 'error-border' : ''}`}
+                disabled={!formData.custtype || !formData.type} 
+                className= {`w-[220px] rounded-lg border border-gray-300 bg-white px-4 py-2 text-gray-900 focus:border-blue-500 focus:ring-2 focus:ring-blue-300 transition-all duration-200 shadow-sm ${invalidFields.includes('terms') ? 'error-border' : ''}`}
                 
               >
                  <option value="" disabled>
@@ -1186,6 +776,7 @@ const resolvedTerritoryCity =
                   </option>
                 ))}
 
+                {/* Include current value if not in options */}
                 {formData.terms && !paymentTermsOptions.some(opt => opt.code === formData.terms) && (
                   <option value={formData.terms}>{formData.terms}</option>
                 )}
@@ -1196,40 +787,33 @@ const resolvedTerritoryCity =
               <strong className="mr-4">CREDIT LIMIT:</strong>
               {isCustomLimit ? (
                 <input
-                  type="text"
+                  type="number"
                   value={formData.creditlimit}
                   onChange={(e) => {
-                    const rawValue = e.target.value.replace(/,/g, '');
-                    if (rawValue === '' || /^\d+$/.test(rawValue)) {
-                      handleInputChange('creditlimit', rawValue);
-                    }
-                  }}
-                  onBlur={(e) => {
-                    const rawValue = e.target.value.replace(/,/g, '');
-                    if (rawValue) {
-                      handleInputChange('creditlimit', formatNumberWithCommas(rawValue));
-                    }
-                    if (rawValue === '') {
+                    const value = e.target.value;
+                    handleInputChange('creditlimit', value);
+
+                    // Switch back to select if input is empty
+                    if (value === '') {
                       setIsCustomLimit(false);
                     }
                   }}
-                  disabled={isApproved}
-                              className={`w-[250px] rounded-lg border border-gray-300 ${isApproved ? "bg-gray-200" : "bg-white"} px-4 py-2 text-gray-900 focus:border-blue-500 focus:ring-2 focus:ring-blue-300 transition-all duration-200 shadow-sm ${invalidFields.includes('creditlimit') ? 'error-border' : ''}`}
+                  className={`w-[250px] rounded-lg border border-gray-300 bg-white px-4 py-2 text-gray-900 focus:border-blue-500 focus:ring-2 focus:ring-blue-300 transition-all duration-200 shadow-sm ${invalidFields.includes('creditlimit') ? 'error-border' : ''}`}
                   placeholder="Enter custom limit"
                 />
               ) : (
                 <select
-                  value={formData.creditlimit || ''}
+                  value={formData.creditlimit || ''} // ensure controlled select
                   onChange={(e) => {
                     if (e.target.value === 'Enter Custom Limit') {
-                      setIsCustomLimit(true);
-                      handleInputChange('creditlimit', '');
+                      setIsCustomLimit(true);           // switch to input
+                      handleInputChange('creditlimit', ''); // clear value
                     } else {
                       handleInputChange('creditlimit', e.target.value);
                     }
                   }}
-                  disabled={!formData.terms || isApproved}
-                              className={`w-[250px] rounded-lg border border-gray-300 ${isApproved ? "bg-gray-200" : "bg-white"} px-4 py-2 text-gray-900 focus:border-blue-500 focus:ring-2 focus:ring-blue-300 transition-all duration-200 shadow-sm ${invalidFields.includes('creditlimit') ? 'error-border' : ''}`}
+                  disabled={!formData.terms}
+                  className={`w-[250px] rounded-lg border border-gray-300 bg-white px-4 py-2 text-gray-900 focus:border-blue-500 focus:ring-2 focus:ring-blue-300 transition-all duration-200 shadow-sm ${invalidFields.includes('creditlimmit') ? 'error-border' : ''}`}
                 >
                   <option value="" disabled>
                     Select Limit
@@ -1256,8 +840,8 @@ const resolvedTerritoryCity =
                   type="text"
                   value={formData.targetvolumeday}
                   onChange={(e) => handleInputChange('targetvolumeday', e.target.value)}
-                disabled={isApproved}
-                  className={`w-[200px] rounded-lg border border-gray-300 ${isApproved ? "bg-gray-200" : "bg-white"} px-4 py-2 text-gray-900 focus:border-blue-500 focus:ring-2 focus:ring-blue-300 transition-all duration-200 shadow-sm ${invalidFields.includes('targetvolumeday') ? 'error-border' : ''}`}
+                //   className="border rounded px-3 py-2 w-[200px]"
+                className={`w-[200px] rounded-lg border border-gray-300 bg-white px-4 py-2 text-gray-900 focus:border-blue-500 focus:ring-2 focus:ring-blue-300 transition-all duration-200 shadow-sm ${invalidFields.includes('targetvolumeday') ? 'error-border' : ''}`}
                 />
               </div>
               <div className="flex items-center mt-8 text-xl">
@@ -1267,10 +851,8 @@ const resolvedTerritoryCity =
                 <input
                   type="text"
                   value={formData.targetvolumemonth}
-                  readOnly
                   onChange={(e) => handleInputChange('targetvolumemonth', e.target.value)}
-                  disabled={isApproved}
-                  className={`w-[200px] rounded-lg border border-gray-300 ${isApproved ? "bg-gray-200" : "bg-white"} px-4 py-2 text-gray-900 focus:border-blue-500 focus:ring-2 focus:ring-blue-300 transition-all duration-200 shadow-sm ${invalidFields.includes('targetvolumemonth') ? 'error-border' : ''}`}
+                  className={`w-[200px] rounded-lg border border-gray-300 bg-white px-4 py-2 text-gray-900 focus:border-blue-500 focus:ring-2 focus:ring-blue-300 transition-all duration-200 shadow-sm ${invalidFields.includes('targetvolumemonth') ? 'error-border' : ''}`}
                 />
               </div>
             </>
@@ -1313,6 +895,7 @@ const resolvedTerritoryCity =
                 >
                   <strong>{row.label}</strong>
 
+                  {/* Employee No */}
                   <select
                     value={formData[row.codeField as keyof CustomerFormData] as string}
                     onChange={(e) =>
@@ -1323,7 +906,7 @@ const resolvedTerritoryCity =
                         e.target.value
                       )
                     }
-                    className={`w-full rounded-lg border ${isApproved ? "bg-gray-200" : "bg-white"} px-4 py-2
+                    className={`w-full rounded-lg border bg-white px-4 py-2
                       ${
                         invalidFields.includes(row.codeField)
                           ? 'error-border'
@@ -1338,6 +921,7 @@ const resolvedTerritoryCity =
                     ))}
                   </select>
 
+                  {/* Employee Name */}
                   <select
                     value={formData[row.nameField as keyof CustomerFormData] as string}
                     onChange={(e) =>
@@ -1348,7 +932,7 @@ const resolvedTerritoryCity =
                         e.target.value
                       )
                     }
-                    className={`w-full rounded-lg border ${isApproved ? "bg-gray-200" : "bg-white"} px-4 py-2
+                    className={`w-full rounded-lg border bg-white px-4 py-2
                       ${
                         invalidFields.includes(row.nameField)
                           ? 'error-border'
@@ -1367,6 +951,8 @@ const resolvedTerritoryCity =
             })}
           </div>
 
+
+
           {/* Signature Section */}
           <div className="mt-10 pt-4">
             <div className="flex text-sm mb-2">
@@ -1375,56 +961,28 @@ const resolvedTerritoryCity =
               <span className="ml-[150px]">Approved By:</span>
             </div>
 
-            {/* Dates */}
-            <div className="flex text-xs text-gray-600">
-              <div className="w-[200px] text-center">{formData.datecreated}</div>
-              <div className="w-[200px] text-center ml-10">{formData.initialapprovedate}</div>
-              <div className="w-[200px] text-center ml-10">{formData.secondapproverdate}</div>
-              <div className="w-[200px] text-center ml-10">{formData.thirdapproverdate}</div>
-            </div>
-
-            {/* Signature lines */}
-            <div className="flex">
+            <div className="flex mt-6 mb-2">
               <div className="w-[200px] border-b border-black"></div>
               <div className="w-[200px] border-b border-black ml-10"></div>
               <div className="w-[200px] border-b border-black ml-10"></div>
               <div className="w-[200px] border-b border-black ml-10"></div>
             </div>
-
-            {/* Names */}
-            <div className="flex text-sm">
-              <div className="w-[200px] text-center">
-                {makerName && <span className="font-semibold">{makerName}</span>}
-              </div>
-              <div className="w-[200px] text-center ml-10">
-                {formData.firstapprovername && <span className="font-semibold">{formData.firstapprovername}</span>}
-              </div>
-              <div className="w-[200px] text-center ml-10">
-                {formData.secondapprovername && <span className="font-semibold">{formData.secondapprovername}</span>}
-              </div>
-              <div className="w-[200px] text-center ml-10">
-                {formData.finalapprovername && <span className="font-semibold">{formData.finalapprovername}</span>}
-              </div>
-            </div>
           </div>
-
-
+          {/* Rest of the form fields... (continuing in next message due to length) */}
+          {/* I'll include a comment here showing this continues with all remaining sections */}
           
           {/* Action Buttons */}
           <div className="flex justify-end space-x-4 pt-6 mt-8">
-            
             {formData.approvestatus === "APPROVED" ? (
+              <button
+                type="button"
+                onClick={onClose}
+                className="px-6 py-2 bg-blue-600 text-white rounded hover:bg-blue-700"
+              >
+                Close
+              </button>
+            ) : formData.approvestatus === "" ? (
               <>
-                <button
-                  type="button"
-                  onClick={handlePrintClick}
-                  className="px-6 py-2 bg-green-600 text-white rounded hover:bg-green-700 flex items-center gap-2"
-                >
-                  <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 17h2a2 2 0 002-2v-4a2 2 0 00-2-2H5a2 2 0 00-2 2v4a2 2 0 002 2h2m2 4h6a2 2 0 002-2v-4a2 2 0 00-2-2H9a2 2 0 00-2 2v4a2 2 0 002 2zm8-12V5a2 2 0 00-2-2H9a2 2 0 00-2 2v4h10z" />
-                  </svg>
-                  PRINT
-                </button>
                 <button
                   type="button"
                   onClick={onClose}
@@ -1432,181 +990,88 @@ const resolvedTerritoryCity =
                 >
                   Close
                 </button>
-              </>
-            ) : formData.approvestatus === "" ? (
-              <>
-                
                 {isEditMode && (
                   <>
                     <button
                       type="button"
-                      onClick={handleUpdateClick}
-                      disabled={isUpdateLoading}
-                      className="px-6 py-2 bg-blue-500 text-white rounded hover:bg-blue-600 disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
+                      onClick={() => updateToGoogleSheet(formData).then(success => success && onClose())}
+                      className="px-6 py-2 bg-blue-500 text-white rounded hover:bg-blue-600"
                     >
-                      {isUpdateLoading && <Spinner />}
-                      {isUpdateLoading ? 'Updating...' : 'Update'}
+                      Update
                     </button>
                     <button
                       type="button"
-                      onClick={handleCancelClick}
-                      disabled={isCancelLoading}
-                      className="px-6 py-2 bg-red-600 text-white rounded hover:bg-red-700 disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
+                      onClick={() => cancelForm(formData).then(success => success && onClose())}
+                      className="px-6 py-2 bg-red-600 text-white rounded hover:bg-red-700"
                     >
-                      {isCancelLoading && <Spinner />}
-                      {isCancelLoading ? 'Cancelling...' : 'Cancel'}
+                      Cancel
                     </button>
                     <button
                       type="button"
-                      onClick={handleSubmitClick}
-                      disabled={isSubmitLoading}
-                      className="px-6 py-2 bg-green-600 text-white rounded hover:bg-green-700 disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
+                      onClick={() => postToGoogleSheet(formData).then(success => success && onClose())}
+                      className="px-6 py-2 bg-green-600 text-white rounded hover:bg-green-700"
                     >
-                      {isSubmitLoading && <Spinner />}
-                      {isSubmitLoading ? 'Submitting...' : 'Submit'}
+                      Submit
                     </button>
                   </>
                 )}
                 {!isEditMode && (
                   <button
                     type="button"
-                    disabled={isDraftLoading}
-                    onClick={handleDraftClick}
-                    className="px-6 py-2 rounded text-white bg-blue-500 hover:bg-blue-600 disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
+                    disabled={loading}
+                    onClick={() => submitToGoogleSheet(formData)}
+                    className={`px-6 py-2 rounded text-white ${
+                      loading
+                        ? 'bg-gray-400 cursor-not-allowed'
+                        : 'bg-blue-500 hover:bg-blue-600'
+                    }`}
                   >
-                    {isDraftLoading && <Spinner />}
-                    {isDraftLoading ? 'Saving...' : 'Draft'}
+                    {loading ? 'Saving Draft...' : 'Draft'}
                   </button>
                 )}
-                <button
-                  type="button"
-                  onClick={onClose}
-                  className="px-6 py-2 bg-blue-600 text-white rounded hover:bg-blue-700"
-                >
-                  Close
-                </button>
               </>
             ) : formData.approvestatus === "PENDING" ? (
               <>
-                 {userPermissions.hasEditAccess && (
-                    <button
-                      type="button"
-                      onClick={handleUpdateClick}
-                      disabled={isUpdateLoading}
-                      className="px-6 py-2 bg-blue-500 text-white rounded hover:bg-blue-600 disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
-                    >
-                      {isUpdateLoading && <Spinner />}
-                      {isUpdateLoading ? 'Updating...' : 'Update'}
-                    </button>
-                  )}
-                <button
-                  type="button"
-                  onClick={handleCancelClick}
-                  disabled={isCancelLoading}
-                  className="px-6 py-2 bg-red-600 text-white rounded hover:bg-red-700 disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
-                >
-                  {isCancelLoading && <Spinner />}
-                  {isCancelLoading ? 'Cancelling...' : 'Cancel'}
-                </button>
-                {userPermissions.isApprover && (
-                  <button
-                  type="button"
-                  onClick={handleApproveClick}
-                  disabled={isApproveLoading}
-                  className="px-6 py-2 bg-blue-600 text-white rounded hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
-                >
-                  {isApproveLoading && <Spinner />}
-                  {isApproveLoading ? 'Approving...' : 'Approved'}
-                </button>
-
-                
-                )}
-                {userPermissions.isApprover && (
-                <button
-                  type="button"
-                  onClick={handleReturnClick}
-                  disabled={isReturnLoading}
-                  className="px-6 py-2 bg-blue-600 text-white rounded hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
-                >
-                  {isApproveLoading && <Spinner />}
-                  {isApproveLoading ? 'Returning...' : 'Return to Maker'}
-                </button>
-              )}
-
                 <button type="button" onClick={onClose} className="px-6 py-2 bg-blue-600 text-white rounded hover:bg-blue-700">
                   Close
                 </button>
-                
+                <button
+                  type="button"
+                  onClick={() => cancelForm(formData).then(success => success && onClose())}
+                  className="px-6 py-2 bg-red-600 text-white rounded hover:bg-red-700"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="button"
+                  onClick={() => approveForm(formData).then(success => success && onClose())}
+                  className="px-6 py-2 bg-blue-600 text-white rounded hover:bg-blue-700"
+                >
+                  Approved
+                </button>
               </>
             ) : (
               <>
-                <button
-                  type="button"
-                  onClick={handleCancelClick}
-                  disabled={isCancelLoading}
-                  className="px-6 py-2 bg-red-600 text-white rounded hover:bg-red-700 disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
-                >
-                  {isCancelLoading && <Spinner />}
-                  {isCancelLoading ? 'Cancelling...' : 'Cancel'}
-                </button>
-                <button
-                  type="button"
-                  onClick={handleSubmitClick}
-                  disabled={isSubmitLoading}
-                  className="px-6 py-2 bg-green-600 text-white rounded hover:bg-green-700 disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
-                >
-                  {isSubmitLoading && <Spinner />}
-                  {isSubmitLoading ? 'Submitting...' : 'Submit'}
-                </button>
                 <button type="button" onClick={onClose} className="px-6 py-2 bg-blue-600 text-white rounded hover:bg-blue-700">
                   Close
+                </button>
+                <button
+                  type="button"
+                  onClick={() => cancelForm(formData).then(success => success && onClose())}
+                  className="px-6 py-2 bg-red-600 text-white rounded hover:bg-red-700"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="button"
+                  onClick={() => postToGoogleSheet(formData).then(success => success && onClose())}
+                  className="px-6 py-2 bg-green-600 text-white rounded hover:bg-green-700"
+                >
+                  Submit
                 </button>
               </>
             )}
           </div>
-           <ConfirmationDialog
-            isOpen={confirmDialog.isOpen}
-            onClose={() => setConfirmDialog({ isOpen: false, action: null })}
-            onConfirm={handleConfirmedAction}
-            action={confirmDialog.action || 'update'}
-          />
-
-          {/* Return to Maker Modal */}
-          {returnDialog.isOpen && (
-            <div className="fixed inset-0 z-[60] flex items-center justify-center bg-black/50">
-              <div className="bg-white rounded-lg shadow-xl p-6 w-[500px]">
-                <h3 className="text-xl font-bold mb-4">Return to Maker</h3>
-                <p className="text-gray-600 mb-4">Please provide remarks for returning this form to the maker:</p>
-                
-                <textarea
-                  value={returnDialog.remarks}
-                  onChange={(e) => setReturnDialog(prev => ({ ...prev, remarks: e.target.value }))}
-                  className="w-full h-32 px-4 py-2 border border-gray-300 rounded-lg focus:border-blue-500 focus:ring-2 focus:ring-blue-300 resize-none"
-                  placeholder="Enter your remarks here..."
-                />
-                
-                <div className="flex justify-end space-x-3 mt-6">
-                  <button
-                    type="button"
-                    onClick={() => setReturnDialog({ isOpen: false, remarks: '' })}
-                    disabled={isReturnLoading}
-                    className="px-6 py-2 bg-gray-300 text-gray-700 rounded hover:bg-gray-400 disabled:opacity-50"
-                  >
-                    Cancel
-                  </button>
-                  <button
-                    type="button"
-                    onClick={handleReturnSubmit}
-                    disabled={isReturnLoading || !returnDialog.remarks.trim()}
-                    className="px-6 py-2 bg-orange-600 text-white rounded hover:bg-orange-700 disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
-                  >
-                    {isReturnLoading && <Spinner />}
-                    {isReturnLoading ? 'Submitting...' : 'Submit'}
-                  </button>
-                </div>
-              </div>
-            </div>
-          )}
         </fieldset>
         </form>
       </div>

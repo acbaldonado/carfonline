@@ -50,37 +50,79 @@ const CarfSidebar: React.FC<CarfSidebarProps> = ({
     fetchFullName();
   }, [userEmail, onUserId]);
 
-  // Fetch navigation dynamically
- useEffect(() => {
-  const fetchNavigation = async () => {
-    const { data, error } = await supabase
-      .from('schemas')
-      .select('*')
-      .order('itemid');
+  // Fetch navigation dynamically with authorization filtering
+  useEffect(() => {
+    const fetchNavigation = async () => {
+      if (!userEmail) return;
 
-    if (!error && data) {
-      const buildTree = (parentCmd: string | null): any[] => {
-        return data
-          .filter(item => item.menuid === parentCmd || (!parentCmd && !item.menuid))
-          .map(item => {
-            const children = buildTree(item.menucmd);
-            return {
-              id: item.objectcode || item.itemid.toString(),
-              label: item.menuname,
-              icon: mapIcon(item.menuicon),
-              ...(children.length ? { children } : {})
-            };
-          });
-      };
+      try {
+        // First, get the user's group
+        const { data: userData, error: userError } = await supabase
+          .from('users')
+          .select('usergroup')
+          .eq('email', userEmail)
+          .single();
 
-      const navItems = buildTree(null); // Start with root items (menuid null or missing)
-      // console.log(navItems);
-      setNavigationItems(navItems);
-    }
-  };
+        if (userError || !userData?.usergroup) {
+          console.error('Failed to fetch user group:', userError);
+          return;
+        }
 
-  fetchNavigation();
-}, []);
+        // Get authorizations for this user's group
+        const { data: authData, error: authError } = await supabase
+          .from('groupauthorizations')
+          .select('menucmd, accesslevel')
+          .eq('groupcode', userData.usergroup)
+          .eq('accesslevel', 'FULL');
+
+        if (authError) {
+          console.error('Failed to fetch authorizations:', authError);
+          return;
+        }
+
+        // Create a Set of authorized menu commands for fast lookup
+        const authorizedMenuCmds = new Set(authData?.map(auth => auth.menucmd) || []);
+
+        // Fetch all schemas
+        const { data: schemasData, error: schemasError } = await supabase
+          .from('schemas')
+          .select('*')
+          .order('itemid');
+
+        if (schemasError || !schemasData) {
+          console.error('Failed to fetch schemas:', schemasError);
+          return;
+        }
+
+        // Filter schemas to only include authorized items
+        const authorizedSchemas = schemasData.filter(item => 
+          authorizedMenuCmds.has(item.menucmd)
+        );
+
+        const buildTree = (parentCmd: string | null): any[] => {
+          return authorizedSchemas
+            .filter(item => item.menuid === parentCmd || (!parentCmd && !item.menuid))
+            .map(item => {
+              const children = buildTree(item.menucmd);
+              return {
+                id: item.objectcode || item.itemid.toString(),
+                label: item.menuname,
+                icon: mapIcon(item.menuicon),
+                menucmd: item.menucmd,
+                ...(children.length ? { children } : {})
+              };
+            });
+        };
+
+        const navItems = buildTree(null); // Start with root items (menuid null or missing)
+        setNavigationItems(navItems);
+      } catch (error) {
+        console.error('Error fetching navigation:', error);
+      }
+    };
+
+    fetchNavigation();
+  }, [userEmail]);
 
 
   // Optional: map string menuicon to actual React icon
@@ -155,9 +197,15 @@ const CarfSidebar: React.FC<CarfSidebarProps> = ({
       </div>
 
       {/* Navigation */}
-      <div className="flex-1 p-4">
+      <div className="flex-1 p-4 overflow-y-auto no-scrollbar">
         <nav className="space-y-1">
-          {navigationItems.map(item => renderNavItem(item))}
+          {navigationItems.length > 0 ? (
+            navigationItems.map(item => renderNavItem(item))
+          ) : (
+            <div className="text-gray-400 text-sm text-center py-4">
+              No authorized menu items
+            </div>
+          )}
         </nav>
       </div>
 

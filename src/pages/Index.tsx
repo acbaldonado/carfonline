@@ -94,17 +94,17 @@ useEffect(() => {
   // }
 
   // ✅ Default flow (Dashboard or Login)
-  const forceLogin = true;
-  if (forceLogin) {
-    return <DashboardLayout userEmail={userEmail} onLogout={handleLogout} />;
-  }
+  // const forceLogin = true;
+  // if (forceLogin) {
+  //   return <DashboardLayout userEmail={userEmail} onLogout={handleLogout} />;
+  // }
 
   // return <LoginPage onLogin={handleLogin} />;
-  // return isLoggedIn ? (
-  //   <DashboardLayout userEmail={userEmail} onLogout={handleLogout} />
-  // ) : (
-  //   <LoginPage onLogin={handleLogin} />
-  // );
+  return isLoggedIn ? (
+    <DashboardLayout userEmail={userEmail} onLogout={handleLogout} />
+  ) : (
+    <LoginPage onLogin={handleLogin} />
+  );
 
 };
 

@@ -32,7 +32,6 @@ const SupportingDocumentsDialog: React.FC<SupportingDocumentsDialogProps> = ({
 
   useEffect(() => {
     if (!isOpen || !gencode) return;
-
     const fetchFolderFiles = async () => {
       setLoading(true);
       try {
@@ -144,11 +143,21 @@ const SupportingDocumentsDialog: React.FC<SupportingDocumentsDialogProps> = ({
         <FileUploadDialog
           isOpen={fileDialogOpen}
           docType={currentDocType}
+          gencode={gencode}
           initialFiles={folderFiles[currentDocType] || []} // pass all files
           onClose={() => setFileDialogOpen(false)}
           onFileSelect={(files) => {
             onFileUpload(currentDocType, files[0] || null);
-            setFileDialogOpen(false);
+            const fetchFolderFiles = async () => {
+              try {
+                const res = await fetch(`http://localhost:3001/api/gencode/${gencode}`);
+                const data = await res.json();
+                setFolderFiles(data);
+              } catch (err) {
+                console.error('Error fetching gencode folder files', err);
+              }
+            };
+            fetchFolderFiles();
           }}
         />
       )}

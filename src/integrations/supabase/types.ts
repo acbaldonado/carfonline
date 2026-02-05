@@ -252,9 +252,7 @@ export type Database = {
           idtype?: string | null
         }
         Relationships: []
-      },
-
-      users: {
+      },users: {
         Row: {
           userid: string
           email: string
@@ -266,6 +264,7 @@ export type Database = {
           usergroup: string 
           company: string 
           allcompanyaccess: boolean
+          complianceandfinalapprover:boolean
         }
         Insert: {
           userid: string
@@ -278,6 +277,7 @@ export type Database = {
           usergroup: string 
           company: string 
           allcompanyaccess: boolean
+          complianceandfinalapprover:boolean
         }
         Update: {
           userid?: string
@@ -290,10 +290,10 @@ export type Database = {
           usergroup: string 
           company: string 
           allcompanyaccess: boolean
+          complianceandfinalapprover:boolean
         }
         Relationships: []
-      },
-      employees: {
+      },employees: {
         Row: {
           employeeno: string
           employeename: string
@@ -310,8 +310,7 @@ export type Database = {
           employeetype: string 
         }
         Relationships: []
-      },
-      schemas: {
+      },schemas: {
         Row: {
           itemid:number
           menuid: string
@@ -344,8 +343,7 @@ export type Database = {
           udfmaintained:boolean
         }
         Relationships: []
-      },
-      udfmaintainance: {
+      },udfmaintainance: {
         Row: {
           id: number
           objectcode: string
@@ -374,8 +372,7 @@ export type Database = {
           truncatecolumn: boolean
         }
         Relationships: []
-      },
-      messages: {
+      },messages: {
         Row: {
           id: number
           sender_id: string
@@ -405,8 +402,7 @@ export type Database = {
         }
 
         Relationships: []
-      },
-      customertypeseries: {
+      },customertypeseries: {
         Row: {
           id: string
           carftype: string | null
@@ -453,8 +449,7 @@ export type Database = {
           defaultbillingaddress?: string | null
         }
         Relationships: []
-      },
-      regionbu: {
+      },regionbu: {
         Row: {
           id: string
           region: string | null
@@ -474,8 +469,7 @@ export type Database = {
           district: string | null
         }
         Relationships: []
-      },
-      salesinfosalesorg: {
+      },salesinfosalesorg: {
         Row: {
           id: string
           salesorganization: string | null
@@ -489,8 +483,7 @@ export type Database = {
           salesorganization: string | null
         }
         Relationships: []
-      },
-      salesinfodistributionchannel: {
+      },salesinfodistributionchannel: {
         Row: {
           id: string
           distributionchannel: string | null
@@ -504,8 +497,7 @@ export type Database = {
           distributionchannel: string | null
         }
         Relationships: []
-      },
-      salesinfodivision: {
+      },salesinfodivision: {
         Row: {
           id: string
           division: string | null
@@ -519,8 +511,7 @@ export type Database = {
           division: string | null
         }
         Relationships: []
-      },
-      salesinfobucenter: {
+      },salesinfobucenter: {
         Row: {
           id: string
           bucenter: string | null
@@ -542,6 +533,9 @@ export type Database = {
           url: string 
           customer_source: string 
           attachment_link: string 
+          sheet_id: string
+          sheet_apikey: string
+          sheet_range: string
         }
         Insert: {
           id:string
@@ -550,6 +544,9 @@ export type Database = {
           url: string 
           customer_source: string
           attachment_link: string 
+          sheet_id: string
+          sheet_apikey: string
+          sheet_range: string
         }
         Update: {
           id?:string
@@ -558,6 +555,284 @@ export type Database = {
           url: string 
           customer_source: string 
           attachment_link: string 
+          sheet_id: string
+          sheet_apikey: string
+          sheet_range: string
+        }
+        Relationships: []
+      },paymentterms: {
+        Row: {
+          id: string
+          paymentterm: string | null
+          paymenttermname: string | null
+          limittype: string | null
+          limitgroup: string | null
+        }
+        Insert: {
+          id?: string
+          paymentterm: string | null
+          paymenttermname: string | null
+          limittype: string | null
+          limitgroup: string | null
+        }
+        Update: {
+          id?: string
+          paymentterm: string | null
+          paymenttermname: string | null
+          limittype: string | null
+          limitgroup: string | null
+        }
+        Relationships: []
+      },paymentlimit: {
+        Row: {
+          id: string
+          paymentlimit: string | null
+          limittype: string | null
+          limitgroup: string | null
+        }
+        Insert: {
+          id?: string
+          paymentlimit: string | null
+          limittype: string | null
+          limitgroup: string | null
+        }
+        Update: {
+          id?: string
+          paymentlimit: string | null
+          limittype: string | null
+          limitgroup: string | null
+        }
+        Relationships: []
+      },approvalmatrix: {
+        Row: {
+          id: string
+          approvaltype: string | null
+          firstapprover: string | null
+          secondapprover: string | null
+          thirdapprover: string | null
+          complianceandfinalapprover:boolean
+        }
+        Insert: {
+          id?: string
+          approvaltype: string | null
+          firstapprover: string | null
+          secondapprover: string | null
+          thirdapprover: string | null
+          complianceandfinalapprover:boolean
+        }
+        Update: {
+          id?: string
+          approvaltype: string | null
+          firstapprover: string | null
+          secondapprover: string | null
+          thirdapprover: string | null
+          complianceandfinalapprover:boolean
+        }
+        Relationships: []
+      },formfields: {
+        Row: {
+          id: string
+          fields: string | null
+          isrequired: boolean | null
+        }
+        Insert: {
+          id?: string
+          fields: string | null
+          isrequired: boolean | null
+        }
+        Update: {
+          id?: string
+          fields: string | null
+          isrequired: boolean | null
+        }
+        Relationships: []
+      },usergroups: {
+        Row: {
+          id: string
+          groupcode: string | null
+          groupname: string | null
+        }
+        Insert: {
+          id?: string
+          groupcode: string | null
+          groupname: string | null
+        }
+        Update: {
+          id?: string
+          groupcode: string | null
+          groupname: string | null
+        }
+        Relationships: []
+      },groupauthorizations: {
+        Row: {
+          id: number
+          groupcode: string
+          menucmd: string
+          accesslevel: string
+          created_at: string
+          updated_at: string
+        }
+        Insert: {
+          id?: number
+          groupcode: string
+          menucmd: string
+          accesslevel: string
+          created_at?: string
+          updated_at?: string
+        }
+        Update: {
+          id?: number
+          groupcode?: string
+          menucmd?: string
+          accesslevel?: string
+          created_at?: string
+          updated_at?: string
+        }
+        Relationships: []
+      },ccemail: {
+        Row: {
+          id: string
+          email: string
+          customergroup: string | null
+          bc: string | null
+          allcarf: boolean
+        }
+        Insert: {
+          id?: string
+          email: string
+          customergroup?: string | null
+          bc?: string | null
+          allcarf?: boolean
+        }
+        Update: {
+          id?: string
+          email?: string
+          customergroup?: string | null
+          bc?: string | null
+          allcarf?: boolean
+        }
+        Relationships: []
+      },execemail: {
+        Row: {
+          id: string
+          userid: string
+          email: string
+          fullname: string | null
+          exception: string | null
+          allaccess: boolean
+        }
+        Insert: {
+          id?: string
+          userid: string
+          email: string
+          fullname?: string | null
+          exception?: string | null
+          allaccess?: boolean
+        }
+        Update: {
+          id?: string
+          userid?: string
+          email?: string
+          fullname?: string | null
+          exception?: string | null
+          allaccess?: boolean
+        }
+        Relationships: []
+      },bcapprovalmatrix: {
+        Row: {
+          id: string
+          approvaltype: string | null
+          firstapprover: string | null
+          exception: string | null
+          exceptionapprover: string | null
+        }
+        Insert: {
+          id?: string
+          approvaltype: string | null
+          firstapprover: string | null
+          exception: string | null
+          exceptionapprover: string | null
+        }
+        Update: {
+          id?: string
+          approvaltype: string | null
+          firstapprover: string | null
+          exception: string | null
+          exceptionapprover: string | null
+        }
+        Relationships: []
+      },notifications: {
+        Row: {
+          id: number
+          gencode: string
+          refid: number
+          notification_type: string
+          action: string
+          actor_userid: string
+          actor_name: string
+          recipient_userid: string | null
+          recipient_name: string | null
+          approval_level: string | null
+          custtype: string | null
+          title: string
+          message: string
+          remarks: string | null
+          is_read: boolean
+          is_sent_email: boolean
+          read_at: string | null
+          form_data: Json | null
+          previous_status: string | null
+          new_status: string | null
+          created_at: string
+          updated_at: string
+        }
+        Insert: {
+          id?: number
+          gencode: string
+          refid: number
+          notification_type: string
+          action: string
+          actor_userid: string
+          actor_name: string
+          recipient_userid?: string | null
+          recipient_name?: string | null
+          approval_level?: string | null
+          custtype?: string | null
+          title: string
+          message: string
+          remarks?: string | null
+          is_read?: boolean
+          is_sent_email?: boolean
+          read_at?: string | null
+          form_data?: Json | null
+          previous_status?: string | null
+          new_status?: string | null
+          created_at?: string
+          updated_at?: string
+        }
+        Update: {
+          id?: number
+          gencode?: string
+          refid?: number
+          notification_type?: string
+          action?: string
+          actor_userid?: string
+          actor_name?: string
+          recipient_userid?: string | null
+          recipient_name?: string | null
+          approval_level?: string | null
+          custtype?: string | null
+          title?: string
+          message?: string
+          remarks?: string | null
+          is_read?: boolean
+          is_sent_email?: boolean
+          read_at?: string | null
+          form_data?: Json | null
+          previous_status?: string | null
+          new_status?: string | null
+          created_at?: string
+          updated_at?: string
         }
         Relationships: []
       },
@@ -569,7 +844,10 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
-      [_ in never]: never
+      generate_carf_doc_no: {
+        Args: Record<string, never>
+        Returns: string
+      }
     }
     Enums: {
       [_ in never]: never

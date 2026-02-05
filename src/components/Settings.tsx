@@ -11,7 +11,10 @@ export default function SettingsUI() {
     publishableKey: '',
     url: '',
     customerSource: 'PROD',
-    attachmentLink:''
+    attachmentLink:'',
+    sheetId:'',
+    sheetAPIkey:'',
+    sheetRange:''
   });
 
   const handleChange = (field, value) => {
@@ -47,7 +50,10 @@ export default function SettingsUI() {
           publishableKey: row.publishable_key,
           url: row.url,
           customerSource: row.customer_source,
-          attachmentLink:row.attachment_link
+          attachmentLink:row.attachment_link,
+          sheetId:row.sheet_id,
+          sheetAPIkey:row.sheet_apikey,
+          sheetRange:row.sheet_range
         });
       }
     } catch (err) {
@@ -76,7 +82,10 @@ export default function SettingsUI() {
             publishable_key: config.publishableKey,
             url: config.url,
             customer_source: config.customerSource,
-            attachment_link:config.attachmentLink
+            attachment_link:config.attachmentLink,
+            sheet_id:config.sheetId,
+            sheet_apikey:config.sheetAPIkey,
+            sheet_range:config.sheetRange
           })
           .eq('id', existing[0].id);
 
@@ -199,6 +208,61 @@ export default function SettingsUI() {
               </select>
               <p className="text-xs text-gray-500">Select where customer data is sourced from</p>
             </div>
+            
+            {/* GOOGLE SHEET SECTION */}
+            <div className="p-4 rounded-lg border border-blue-500 bg-blue-900/30 space-y-6">
+              <h3 className="text-lg font-semibold text-blue-300">Google Sheet Configuration</h3>
+
+              {/* Sheet ID */}
+              <div className="space-y-2">
+                <label className="flex items-center gap-2 text-sm font-medium text-blue-300">
+                  <Database className="w-4 h-4 text-blue-400" />
+                  Google Sheet ID
+                </label>
+                <input
+                  type="text"
+                  value={config.sheetId}
+                  onChange={(e) => handleChange('sheetId', e.target.value)}
+                  className="w-full px-4 py-3 bg-[#374151] border border-gray-600 rounded-md focus:outline-none focus:ring-2 focus:ring-red-500 focus:border-transparent text-white"
+                  placeholder="Enter Google Sheet ID"
+                />
+              <p className="text-xs text-gray-500">Your Google Sheet ID</p>
+              </div>
+
+              {/* Sheet API Key */}
+              <div className="space-y-2">
+                <label className="flex items-center gap-2 text-sm font-medium text-blue-300">
+                  <Key className="w-4 h-4 text-yellow-400" />
+                  Google Sheet API Key
+                </label>
+
+                <input
+                  type="text"
+                  value={config.sheetAPIkey}
+                  onChange={(e) => handleChange('sheetAPIkey', e.target.value)}
+                  className="w-full px-4 py-3 bg-[#374151] border border-gray-600 rounded-md focus:outline-none focus:ring-2 focus:ring-red-500 focus:border-transparent text-white"
+                  placeholder="Enter Google Sheet API Key"
+                />
+              <p className="text-xs text-gray-500">Your Google Sheet API Key</p>
+              </div>
+
+              {/* Sheet Range */}
+              <div className="space-y-2">
+                <label className="flex items-center gap-2 text-sm font-medium text-blue-300">
+                  <Database className="w-4 h-4 text-green-400" />
+                  Google Sheet Range
+                </label>
+                 <input
+                  type="text"
+                  value={config.sheetRange}
+                  onChange={(e) => handleChange('sheetRange', e.target.value)}
+                  className="w-full px-4 py-3 bg-[#374151] border border-gray-600 rounded-md focus:outline-none focus:ring-2 focus:ring-red-500 focus:border-transparent text-white"
+                  placeholder="Example: A2:G500"
+                />
+              <p className="text-xs text-gray-500">Your Google Sheet Range</p>
+              </div>
+            </div>
+
 
             {/* Attachment Drive ID */}
             <div className="space-y-2">

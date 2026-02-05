@@ -6,6 +6,7 @@ import { Card, CardContent } from '@/components/ui/card';
 import { Search, User } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from '@/hooks/use-toast';
+import { useSystemSettings } from '../SystemSettings/SystemSettingsContext';
 
 interface Customer {
   id: string;
@@ -33,53 +34,23 @@ const CancelledCustomerList: React.FC<CustomerListProps>  = ({onEditCustomer }) 
   const itemsPerPage = 25;
   const [udfFields, setUdfFields] = useState<FieldType[]>([]);
   const [columns, setColumns] = useState<string[]>([]);
-  const [config, setConfig] = useState<{ customerSource: string }>({ customerSource: 'null' });
+  const { customerSource, sheetId, sheetApiKey, sheetRange } = useSystemSettings();
   
-  const SHEET_ID = "1JJDh_w_opcdy3QNPZ-1xh-wahsx_t0iElBw95TwK8iY";
-  const API_KEY = "AIzaSyDy68c4i84RYAM-5iDKyzCGQVCJPimid4U";
-  const RANGE = "CUSTOMER DATA!A1:BX6000"; 
-  const loadSettings = async () => {
-    try {
-      const { data, error } = await supabase
-        .from('system_settings')
-        .select('customer_source')
-        .limit(1);
-
-      if (error) throw error;
-      if (data && data.length > 0) {
-        setConfig(prev => ({ ...prev, customerSource: data[0].customer_source }));
-      }
-    } catch (err) {
-      console.error('Failed to load system settings:', err);
-    }
-  };
-
-  // useEffect(() => {
-  //   const initialize = async () => {
-  //     await fetchUdfFields();
-  //     await fetchCancelledCustomers();
-  //   };
-  //   initialize();
-  // }, []);
-
-  // Fetch UDF fields first, then customers
   useEffect(() => {
     const initialize = async () => {
-      await loadSettings();
-      await fetchUdfFields();      
+      await fetchUdfFields();
     };
     initialize();
   }, []);
 
   useEffect(() => {
-    if (config.customerSource) {
-      if (config.customerSource === 'PROD') {
-        fetchCancelledCustomers();
-      } else {
-        fetchCustomersFromGSheet();
-      }
+    if (!customerSource || !sheetId || !sheetApiKey || !sheetRange) return;
+    if (customerSource=== 'PROD') {
+      fetchCancelledCustomers();
+    } else {
+      fetchCustomersFromGSheet();
     }
-  }, [config.customerSource]);
+  }, [customerSource, sheetId, sheetApiKey, sheetRange]);
 
 
   const fetchUdfFields = async () => {
@@ -136,8 +107,33 @@ const CancelledCustomerList: React.FC<CustomerListProps>  = ({onEditCustomer }) 
   const fetchCustomersFromGSheet = async () => {
     try {
       setLoading(true);
+
+      const userid = (window as any).getGlobal?.('userid');
+      if (!userid) {
+        console.error('User ID not found in global');
+        toast({
+          title: "Error",
+          description: "User session not found. Please refresh the page.",
+          variant: "destructive",
+        });
+        return;
+      }
+
+      // Fetch user's allaccess setting
+      const { data: userData, error: userError } = await supabase
+        .from('users')
+        .select('allaccess')
+        .eq('userid', userid)
+        .single();
+
+      if (userError) {
+        console.error('Error fetching user access:', userError);
+        throw userError;
+      }
+
+      const hasAllAccess = userData?.allaccess || false;
       const res = await fetch(
-        `https://sheets.googleapis.com/v4/spreadsheets/${SHEET_ID}/values/${RANGE}?key=${API_KEY}`
+        `https://sheets.googleapis.com/v4/spreadsheets/${sheetId}/values/${sheetRange}?key=${sheetApiKey}`
       );
       const result = await res.json();
 
@@ -158,10 +154,16 @@ const CancelledCustomerList: React.FC<CustomerListProps>  = ({onEditCustomer }) 
         return customer;
       });
 
-      const filteredCustomers = sheetCustomers.filter((customer) => {
+      let filteredCustomers = sheetCustomers.filter((customer) => {
         const status = (customer.approvestatus || "").trim().toUpperCase();
         return status === "CANCELLED";
       });
+
+      if (!hasAllAccess) {
+        filteredCustomers = filteredCustomers.filter((customer) => 
+          customer.maker === userid
+        );
+      }
       setCustomers(filteredCustomers);
     } catch (error) {
       console.error("Error fetching Google Sheet:", error);

@@ -24,6 +24,7 @@ export default function UsersList() {
     usergroup: '',
     company: '',
     allcompanyaccess: false,
+    complianceandfinalapprover: false,
     });
 
 
@@ -61,6 +62,7 @@ export default function UsersList() {
         usergroup: '',
         company: '',
         allcompanyaccess: false,
+        complianceandfinalapprover: false,
     });
     setShowModal(true);
   };
@@ -78,6 +80,7 @@ export default function UsersList() {
       usergroup: user.usergroup || '',
       company: user.company || '',
       allcompanyaccess: user.allcompanyaccess || false,
+      complianceandfinalapprover: user.complianceandfinalapprover || false,
     });
     setShowModal(true);
   };
@@ -133,6 +136,7 @@ export default function UsersList() {
         usergroup: '',
         company: '',
         allcompanyaccess: false,
+        complianceandfinalapprover: false,
       });
     } catch (error) {
       toast({
@@ -213,6 +217,7 @@ export default function UsersList() {
                 <th className="text-left px-6 py-4 text-sm font-semibold text-gray-300">Company</th>
                 <th className="text-left px-6 py-4 text-sm font-semibold text-gray-300">User Group</th>
                 <th className="text-left px-6 py-4 text-sm font-semibold text-gray-300">All Company Access</th>
+                <th className="text-left px-6 py-4 text-sm font-semibold text-gray-300">Compliance & Final Approver</th>
                 <th className="text-left px-6 py-4 text-sm font-semibold text-gray-300 w-32">Actions</th>
               </tr>
             </thead>
@@ -229,6 +234,7 @@ export default function UsersList() {
                   <td className="px-6 py-4 text-gray-200">{user.company}</td>
                   <td className="px-6 py-4 text-gray-200">{user.usergroup}</td>
                   <td className="px-6 py-4 text-gray-200">{boolText(user.allcompanyaccess)}</td>
+                  <td className="px-6 py-4 text-gray-200">{boolText(user.complianceandfinalapprover)}</td>
                   <td className="px-6 py-4 w-32">
                     <div className="flex items-center gap-2">
                       <button
@@ -267,7 +273,7 @@ export default function UsersList() {
               </button>
             </div>
             <div className="space-y-3">
-              {['userid','email','fullname','approver','allaccess','editaccess','customlimitaccess','usergroup','company','allcompanyaccess'].map((field) => (
+              {['userid','email','fullname','approver','allaccess','editaccess','customlimitaccess','usergroup','company','allcompanyaccess','complianceandfinalapprover'].map((field) => (
                 <div key={field} className="flex flex-col">
                   <label className="text-sm mb-1 capitalize">{field}</label>
                   <input

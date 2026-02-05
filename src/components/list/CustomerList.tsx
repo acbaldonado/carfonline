@@ -5,6 +5,8 @@ import { Card, CardContent } from '@/components/ui/card';
 import { Search, Plus, User } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from '@/hooks/use-toast';
+import { useSystemSettings } from '../SystemSettings/SystemSettingsContext';
+
 
 interface Customer {
   id: string;
@@ -32,46 +34,24 @@ const CustomerList: React.FC<CustomerListProps> = ({ onNewCustomer, onEditCustom
   const [currentPage, setCurrentPage] = useState(1);
   const itemsPerPage = 200;
   const [udfFields, setUdfFields] = useState<FieldType[]>([]);
-  const [config, setConfig] = useState<{ customerSource: string }>({ customerSource: 'null' });
-
-  const SHEET_ID = "1JJDh_w_opcdy3QNPZ-1xh-wahsx_t0iElBw95TwK8iY";
-  const API_KEY = "AIzaSyDy68c4i84RYAM-5iDKyzCGQVCJPimid4U";
-  const RANGE = "CUSTOMER DATA!A1:BX6000"; 
-  const [settingsLoaded, setSettingsLoaded] = useState(false);
-
-  const loadSettings = async () => {
-    try {
-      const { data, error } = await supabase
-        .from('system_settings')
-        .select('customer_source')
-        .limit(1);
-      if (error) throw error;
-      if (data && data.length > 0) {
-        setConfig(prev => ({ ...prev, customerSource: data[0].customer_source }));
-      }
-    } catch (err) {
-      console.error('Failed to load system settings:', err);
-    }finally {
-      setSettingsLoaded(true);
-    }
-  };
+  const { customerSource, sheetId, sheetApiKey, sheetRange } = useSystemSettings();
 
   useEffect(() => {
     const initialize = async () => {
-      await loadSettings();
+      // await loadSettings();
       await fetchUdfFields();
     };
     initialize();
   }, []);
 
   useEffect(() => {
-    if (!settingsLoaded) return; // <-- wait for settings
-    if (config.customerSource === 'PROD') {
+    if (!customerSource || !sheetId || !sheetApiKey || !sheetRange) return;
+    if (customerSource=== 'PROD') {
       fetchCustomers();
     } else {
       fetchCustomersFromGSheet();
     }
-  }, [config.customerSource, settingsLoaded]);
+  }, [customerSource, sheetId, sheetApiKey, sheetRange]);
 
   const fetchUdfFields = async () => {
     try {
@@ -91,7 +71,7 @@ const CustomerList: React.FC<CustomerListProps> = ({ onNewCustomer, onEditCustom
       });
     }
   };
-
+  
   const truncate = (value: any, max = 20) => {
     if (!value) return "-";
     const str = String(value);
@@ -122,9 +102,41 @@ const CustomerList: React.FC<CustomerListProps> = ({ onNewCustomer, onEditCustom
 
   const fetchCustomersFromGSheet = async () => {
     try {
+      // alert(`https://sheets.googleapis.com/v4/spreadsheets/${sheetId}/values/${sheetRange}?key=${sheetApiKey}`);
       setLoading(true);
+
+
+      const userid = (window as any).getGlobal?.('userid');
+      if (!userid) {
+        console.error('User ID not found in global');
+        toast({
+          title: "Error",
+          description: "User session not found. Please refresh the page.",
+          variant: "destructive",
+        });
+        return;
+      }
+
+      // Fetch user's allaccess setting
+      const { data: userData, error: userError } = await supabase
+        .from('users')
+       .select('allaccess,allcompanyaccess,company')
+        .eq('userid', userid)
+        .single();
+
+      if (userError) {
+        console.error('Error fetching user access:', userError);
+        throw userError;
+      }
+
+      const hasAllAccess = userData?.allaccess || false;
+      const hasAllCompanyAccess = userData?.allcompanyaccess || false;
+      const userCompany = userData?.company || null;
+
+
       const res = await fetch(
-        `https://sheets.googleapis.com/v4/spreadsheets/${SHEET_ID}/values/${RANGE}?key=${API_KEY}`
+        `https://sheets.googleapis.com/v4/spreadsheets/${sheetId}/values/${sheetRange}?key=${sheetApiKey}`
+        
       );
       const result = await res.json();
       if (!result.values || result.values.length === 0) {
@@ -139,10 +151,26 @@ const CustomerList: React.FC<CustomerListProps> = ({ onNewCustomer, onEditCustom
         });
         return customer;
       });
-      const filteredCustomers = sheetCustomers.filter((customer) => {
+
+      
+      let filteredCustomers = sheetCustomers.filter((customer) => {
+        // console.log(customer);
         const status = (customer.approvestatus || "").trim().toUpperCase();
-        return status === "" || status === "PENDING";
+        return status !== "APPROVED" && status !== "CANCELLED" && status !== "APPROVED" && status !== "RETURN TO MAKER";
       });
+
+      if (!hasAllAccess) {
+        filteredCustomers = filteredCustomers.filter((customer) => 
+          customer.maker === userid
+        );
+      }
+
+      if (!hasAllCompanyAccess && userCompany) {
+        filteredCustomers = filteredCustomers.filter((customer) => 
+          (customer.company || "").trim() === userCompany.trim()
+        );
+      }
+
       setCustomers(filteredCustomers);
     } catch (error) {
       console.error("Error fetching Google Sheet:", error);
@@ -167,6 +195,8 @@ const CustomerList: React.FC<CustomerListProps> = ({ onNewCustomer, onEditCustom
   const startIndex = (currentPage - 1) * itemsPerPage;
   const endIndex = startIndex + itemsPerPage;
   const currentCustomers = filteredCustomers.slice(startIndex, endIndex);
+
+
 
   if (loading) {
     return (
