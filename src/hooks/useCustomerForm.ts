@@ -189,7 +189,7 @@ export const useCustomerForm = (
     boardResolution: null,
     others: null,
   });
-
+  const BASE_URL = import.meta.env.VITE_API_BASE_URL || '';
   const [userPermissions, setUserPermissions] = useState({
     isApprover: false,
     hasEditAccess: false,
@@ -547,7 +547,7 @@ export const useCustomerForm = (
         return;
       }
       try {
-        const res = await fetch(`http://localhost:3001/api/gencode/${gencode}`);
+        const res = await fetch(`${BASE_URL}/api/gencode/${gencode}`);
         const data = await res.json();
         const hasAnyFiles = Object.values(data).some(
           (files: any) => Array.isArray(files) && files.length > 0
@@ -1158,7 +1158,7 @@ export const useCustomerForm = (
         company: userCompany,
       };
 
-      const response = await fetch('http://localhost:3001/api/submitform', {
+      const response = await fetch(`${BASE_URL}/api/submitform`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ rows: [dataToSend] }),
@@ -1272,7 +1272,7 @@ export const useCustomerForm = (
         company: userCompany,
       };
 
-      const response = await fetch('http://localhost:3001/api/updateform', {
+      const response = await fetch(`${BASE_URL}/api/updateform`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ rowId, data: dataToSend }),
@@ -1392,7 +1392,7 @@ export const useCustomerForm = (
     console.log('Submitting to BOS with data:', dataToSend);
 
     // Submit to BOS sheet
-    const response = await fetch('http://localhost:3001/api/submittobos', {
+    const response = await fetch(`${BASE_URL}/api/submittobos`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ rows: [dataToSend] }),
@@ -1493,7 +1493,7 @@ export const useCustomerForm = (
       };
 
       // Submit to BOS sheet
-      const response = await fetch('http://localhost:3001/api/submittoemail', {
+      const response = await fetch(`${BASE_URL}/api/submittoemail`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ rows: [dataToSend] }),
@@ -1614,7 +1614,7 @@ export const useCustomerForm = (
       }));
 
       // Submit all rows to the sheet
-      const response = await fetch('http://localhost:3001/api/submittoexecemail', {
+      const response = await fetch(`${BASE_URL}/api/submittoexecemail`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ rows: rowsToSend }),
@@ -1655,7 +1655,7 @@ export const useCustomerForm = (
   const checkForServerFiles = async (gencode?: string): Promise<boolean> => {
     if (!gencode) return false;
     try {
-      const res = await fetch(`http://localhost:3001/api/gencode/${gencode}`);
+      const res = await fetch(`${BASE_URL}/api/gencode/${gencode}`);
       const data = await res.json();
       return Object.values(data).some((files: any) => Array.isArray(files) && files.length > 0);
     } catch (err) {
@@ -1767,7 +1767,7 @@ export const useCustomerForm = (
         company: userCompany,
       };
 
-      const response = await fetch('http://localhost:3001/api/updateform', {
+      const response = await fetch(`${BASE_URL}/api/updateform`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ rowId, data: dataToSend }),
@@ -1932,7 +1932,7 @@ export const useCustomerForm = (
 
 
 
-      const response = await fetch('http://localhost:3001/api/updateform', {
+      const response = await fetch(`${BASE_URL}/api/updateform`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ rowId, data: dataToSend }),
@@ -2002,7 +2002,7 @@ export const useCustomerForm = (
         finalapprover: '',
       };
 
-      const response = await fetch('http://localhost:3001/api/updateform', {
+      const response = await fetch(`${BASE_URL}/api/updateform`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ rowId, data: dataToSend }),
@@ -2050,7 +2050,7 @@ export const useCustomerForm = (
           returnStatus,remarksreturn
         );
 
-      const response = await fetch('http://localhost:3001/api/updateform', {
+      const response = await fetch(`${BASE_URL}/api/updateform`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ rowId, data: dataToSend }),
@@ -2089,7 +2089,7 @@ export const useCustomerForm = (
         finalapprover: '',
       };
 
-      const response = await fetch('http://localhost:3001/api/updateform', {
+      const response = await fetch(`${BASE_URL}/api/updateform`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ rowId, data: dataToSend }),

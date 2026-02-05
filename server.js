@@ -4,6 +4,7 @@ import { google } from 'googleapis';
 import path from 'path';
 import multer from 'multer'; // ✅ MISSING IMPORT
 import { Readable } from 'stream'; // ✅ MISSING IMPORT
+import 'dotenv/config';
 
 const app = express();
 const PORT = 3001;
@@ -19,13 +20,24 @@ app.use(express.json());
 const upload = multer({ storage: multer.memoryStorage() });
 
 // Google Auth
+// const auth = new google.auth.GoogleAuth({
+//   keyFile: path.join(process.cwd(), 'service-account.json'),
+//   scopes: [
+//     'https://www.googleapis.com/auth/drive',
+//     'https://www.googleapis.com/auth/spreadsheets'
+//   ],
+// });
+
+// Google Auth
 const auth = new google.auth.GoogleAuth({
-  keyFile: path.join(process.cwd(), 'service-account.json'),
+  credentials: JSON.parse(process.env.SERVICE_ACCOUNT_JSON),
   scopes: [
     'https://www.googleapis.com/auth/drive',
     'https://www.googleapis.com/auth/spreadsheets'
   ],
 });
+
+
 
 // -----------------------------
 // Helper: list files in a folder
