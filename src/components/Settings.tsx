@@ -22,7 +22,7 @@ export default function SettingsUI() {
     setSaved(false);
   };
 
-
+  const BASE_URL = import.meta.env.VITE_API_BASE_URL || '';
   const maskKey = (key) => {
     if (!showKeys && key.length > 20) {
       return key.substring(0, 10) + '•••••••••••••' + key.substring(key.length - 10);
@@ -94,14 +94,6 @@ export default function SettingsUI() {
           return;
         }
       }
-
-      await fetch('http://localhost:8080/api/update-env', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ customerSource: config.customerSource })
-        });
-
-    
       setSaved(true);
       setTimeout(() => setSaved(false), 3000);
       toast({
