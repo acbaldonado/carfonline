@@ -1099,7 +1099,7 @@ export const useCustomerForm = (
 
       const userCompany = userData?.company || '';
       const { nextApprover, finalApprover } = await getApprovalMatrix(formData.custtype, formData.bucenter);
-
+      const now = new Date().toLocaleString();
       const dataToSend = {
         '#': 0,
         gencode,
@@ -1150,7 +1150,8 @@ export const useCustomerForm = (
         approvestatus: '',
         nextapprover: nextApprover,
         finalapprover: finalApprover,
-        // ✅ These are already codes now — formData stores codes directly
+        maker: userid,
+        datecreated: now,
         territoryregion: formData.territoryregion,
         territoryprovince: formData.territoryprovince,
         territorycity: formData.territorycity,
@@ -1264,7 +1265,8 @@ export const useCustomerForm = (
         approvestatus: formData.approvestatus,
         nextapprover: nextApprover,
         finalapprover: finalApprover,
-        // ✅ Already codes
+        maker: formData.maker,
+        datecreated: formData.datecreated,
         territoryregion: formData.territoryregion,
         territoryprovince: formData.territoryprovince,
         territorycity: formData.territorycity,
