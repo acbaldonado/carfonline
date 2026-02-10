@@ -30,6 +30,7 @@ import EXECEMAIL from './admin-management/ExecEmail';
 import BCApprovalMatrix from './admin-management/BCApprovalMatrix';
 import { useNotifications } from '@/hooks/useNotifications';
 import { formatDistanceToNow } from 'date-fns';
+import { supabase } from '@/integrations/supabase/client';
 
 interface DashboardLayoutProps {
   userEmail: string;
@@ -37,7 +38,7 @@ interface DashboardLayoutProps {
   onLogout: () => void;
 }
 
-const DashboardLayout: React.FC<DashboardLayoutProps> = ({ userEmail,  userId, onLogout }) => {
+const DashboardLayout: React.FC<DashboardLayoutProps> = ({ userEmail, userId, onLogout }) => {
   const [activeTab, setActiveTab] = useState('customer-list');
   const [showNewCustomerForm, setShowNewCustomerForm] = useState(false);
   const [showSubmitTicketForm, setShowSubmitTicketForm] = useState(false);
@@ -47,6 +48,8 @@ const DashboardLayout: React.FC<DashboardLayoutProps> = ({ userEmail,  userId, o
   const [showSettings, setShowSettings] = useState(false);
   const [previousTab, setPreviousTab] = useState<string>('customer-list');
   const [showNotifications, setShowNotifications] = useState(false);
+  const [hasAuthorization, setHasAuthorization] = useState<boolean>(true); // ✅ NEW: track authorization status
+  const [userGroup, setUserGroup] = useState<string>(''); // ✅ NEW: track user's usergroup
 
   // ✅ Get userid from global state
   const userid = (window as any).getGlobal?.('userid') || '';
@@ -60,7 +63,26 @@ const DashboardLayout: React.FC<DashboardLayoutProps> = ({ userEmail,  userId, o
     markAllAsRead,
     deleteNotification,
     refreshNotifications,
-  } = useNotifications(userid, true); // true = enable real-time subscription
+  } = useNotifications(userid, true);
+
+  // ✅ Fetch user's usergroup on mount
+  useEffect(() => {
+    const fetchUserGroup = async () => {
+      if (!userEmail) return;
+      
+      const { data, error } = await supabase
+        .from('users')
+        .select('usergroup')
+        .eq('email', userEmail)
+        .single();
+
+      if (!error && data) {
+        setUserGroup(data.usergroup || '');
+      }
+    };
+
+    fetchUserGroup();
+  }, [userEmail]);
 
   const handleTabChange = (tab: string) => {
     setActiveTab(tab);
@@ -86,20 +108,18 @@ const DashboardLayout: React.FC<DashboardLayoutProps> = ({ userEmail,  userId, o
     setActiveTab(previousTab);
   };
 
+  // ✅ NEW: Handle authorization status from sidebar
+  const handleAuthorizationStatus = (status: boolean) => {
+    setHasAuthorization(status);
+  };
+
   // ✅ Handle notification click
   const handleNotificationClick = async (notification: any) => {
-    // Mark as read
     if (!notification.is_read) {
       await markAsRead(notification.id);
     }
-
-    // Close notification panel
     setShowNotifications(false);
-
-    // Navigate to the form if needed
     if (notification.gencode) {
-      // You can implement navigation to the specific form here
-      // For example, open the customer form with the gencode
       console.log('Navigate to form:', notification.gencode);
     }
   };
@@ -135,8 +155,23 @@ const DashboardLayout: React.FC<DashboardLayoutProps> = ({ userEmail,  userId, o
     day: 'numeric',
   });
 
+  // ✅ NEW: Unauthorized Access Component - Simple version matching sidebar style
+  const UnauthorizedAccess = () => (
+    <div className="flex items-center justify-center h-full min-h-[400px]">
+      <div className="text-center px-6">
+        <p className="text-muted-foreground text-sm">No authorized menu items</p>
+      </div>
+    </div>
+  );
+
   const renderContent = () => {
-    if (showNewCustomerForm)
+    // ✅ Show Submit Ticket Form if active (should always be accessible)
+    if (showSubmitTicketForm) {
+      return <SubmitTicketForm onBack={handleBackToCustomerList} onSuccess={handleBackToCustomerList} />;
+    }
+
+    // ✅ Show forms if active
+    if (showNewCustomerForm) {
       return (
         <NewCustomerForm
           dialogVisible={showNewCustomerForm}
@@ -147,10 +182,14 @@ const DashboardLayout: React.FC<DashboardLayoutProps> = ({ userEmail,  userId, o
           initialData={editingCustomer}
         />
       );
+    }
 
-    if (showSubmitTicketForm)
-      return <SubmitTicketForm onBack={handleBackToCustomerList} onSuccess={handleBackToCustomerList} />;
+    // ✅ Check authorization before showing any content (except forms above)
+    if (!hasAuthorization) {
+      return <UnauthorizedAccess />;
+    }
 
+    // ✅ Render authorized content based on active tab
     switch (activeTab) {
       case 'approved':
         return <ApprovedCustomerList onEditCustomer={handleEditCustomer} />;
@@ -201,10 +240,10 @@ const DashboardLayout: React.FC<DashboardLayoutProps> = ({ userEmail,  userId, o
       case 'bcapprovalmatrix':
         return <BCApprovalMatrix />;
       case 'customerlist':
+      case 'customer-list':
       default:
-        return (
-          <CustomerList userId={userId} onNewCustomer={handleNewCustomer} onEditCustomer={handleEditCustomer} />
-        );
+        // ✅ When authorized, show CustomerList as default
+        return <CustomerList userId={userId} onNewCustomer={handleNewCustomer} onEditCustomer={handleEditCustomer} />;
     }
   };
 
@@ -222,6 +261,7 @@ const DashboardLayout: React.FC<DashboardLayoutProps> = ({ userEmail,  userId, o
             onTabChange={handleTabChange}
             userEmail={userEmail}
             onLogout={onLogout}
+            onAuthorizationStatus={handleAuthorizationStatus} // ✅ NEW: Pass callback
           />
         </div>
       </div>
@@ -245,7 +285,7 @@ const DashboardLayout: React.FC<DashboardLayoutProps> = ({ userEmail,  userId, o
             <h2 className="text-lg sm:text-xl font-semibold text-foreground">ONLINE CARF</h2>
           </div>
           <div className="flex items-center space-x-4 relative">
-            {/* ✅ Notification Bell with Dropdown */}
+            {/* Notification Bell with Dropdown */}
             <div className="relative">
               <button
                 onClick={() => setShowNotifications(!showNotifications)}
@@ -260,7 +300,7 @@ const DashboardLayout: React.FC<DashboardLayoutProps> = ({ userEmail,  userId, o
                 )}
               </button>
 
-              {/* ✅ Notifications Dropdown */}
+              {/* Notifications Dropdown */}
               {showNotifications && (
                 <div className="absolute right-0 mt-2 w-96 bg-card border border-border rounded-xl shadow-lg z-50 max-h-[500px] overflow-hidden flex flex-col">
                   {/* Header */}
@@ -349,7 +389,6 @@ const DashboardLayout: React.FC<DashboardLayoutProps> = ({ userEmail,  userId, o
                     <div className="px-4 py-2 border-t border-border bg-card sticky bottom-0">
                       <button
                         onClick={() => {
-                          // You can implement a "View All" page here
                           setShowNotifications(false);
                         }}
                         className="text-xs text-blue-500 hover:text-blue-600 w-full text-center"
@@ -388,16 +427,19 @@ const DashboardLayout: React.FC<DashboardLayoutProps> = ({ userEmail,  userId, o
                   >
                     <MessageSquare className="h-4 w-4" /> Messages
                   </button>
-                  <button
-                    onClick={() => {
-                      setShowSettings(true);
-                      setShowUserMenu(false);
-                      setActiveTab('settings');
-                    }}
-                    className="flex items-center gap-2 px-4 py-2 text-sm text-foreground hover:bg-muted w-full text-left"
-                  >
-                    <Settings className="h-4 w-4" /> Settings
-                  </button>
+                  {/* ✅ Only show Settings if user is sysadmin */}
+                  {userGroup === 'sysadmin' && (
+                    <button
+                      onClick={() => {
+                        setShowSettings(true);
+                        setShowUserMenu(false);
+                        setActiveTab('settings');
+                      }}
+                      className="flex items-center gap-2 px-4 py-2 text-sm text-foreground hover:bg-muted w-full text-left"
+                    >
+                      <Settings className="h-4 w-4" /> Settings
+                    </button>
+                  )}
                 </div>
               )}
             </div>
@@ -418,9 +460,7 @@ const DashboardLayout: React.FC<DashboardLayoutProps> = ({ userEmail,  userId, o
           style={{ left: isCollapsed ? '0' : '300px' }}
         >
           <span>Online CARF</span>
-          <span>
-            Version 3.0 {today}
-          </span>
+          <span>Version 3.0 {today}</span>
         </footer>
       </div>
     </div>

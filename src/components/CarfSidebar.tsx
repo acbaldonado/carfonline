@@ -12,7 +12,8 @@ interface CarfSidebarProps {
   onTabChange: (tab: string) => void;
   userEmail: string;
   onLogout: () => void;
-  onUserId?: (id: string) => void; // optional callback
+  onUserId?: (id: string) => void;
+  onAuthorizationStatus?: (hasAuthorization: boolean) => void; // ✅ NEW: callback for auth status
 }
 
 const CarfSidebar: React.FC<CarfSidebarProps> = ({ 
@@ -20,7 +21,8 @@ const CarfSidebar: React.FC<CarfSidebarProps> = ({
   onTabChange, 
   userEmail, 
   onLogout,
-  onUserId 
+  onUserId,
+  onAuthorizationStatus // ✅ NEW
 }) => {
   const [openMenus, setOpenMenus] = useState<{ [key: string]: boolean }>({});
   const [fullName, setFullName] = useState('');
@@ -44,7 +46,7 @@ const CarfSidebar: React.FC<CarfSidebarProps> = ({
       if (!error && data) {
         setFullName(data.fullname);
         setUserId(data.userid);
-        if (onUserId) onUserId(data.userid); // optional upward callback
+        if (onUserId) onUserId(data.userid);
       }
     };
     fetchFullName();
@@ -65,6 +67,8 @@ const CarfSidebar: React.FC<CarfSidebarProps> = ({
 
         if (userError || !userData?.usergroup) {
           console.error('Failed to fetch user group:', userError);
+          // ✅ Notify parent that there's no authorization
+          if (onAuthorizationStatus) onAuthorizationStatus(false);
           return;
         }
 
@@ -77,11 +81,20 @@ const CarfSidebar: React.FC<CarfSidebarProps> = ({
 
         if (authError) {
           console.error('Failed to fetch authorizations:', authError);
+          // ✅ Notify parent that there's no authorization
+          if (onAuthorizationStatus) onAuthorizationStatus(false);
           return;
         }
 
         // Create a Set of authorized menu commands for fast lookup
         const authorizedMenuCmds = new Set(authData?.map(auth => auth.menucmd) || []);
+
+        // ✅ Check if user has any authorizations
+        if (authorizedMenuCmds.size === 0) {
+          if (onAuthorizationStatus) onAuthorizationStatus(false);
+          setNavigationItems([]);
+          return;
+        }
 
         // Fetch all schemas
         const { data: schemasData, error: schemasError } = await supabase
@@ -91,6 +104,8 @@ const CarfSidebar: React.FC<CarfSidebarProps> = ({
 
         if (schemasError || !schemasData) {
           console.error('Failed to fetch schemas:', schemasError);
+          // ✅ Notify parent that there's no authorization
+          if (onAuthorizationStatus) onAuthorizationStatus(false);
           return;
         }
 
@@ -114,15 +129,22 @@ const CarfSidebar: React.FC<CarfSidebarProps> = ({
             });
         };
 
-        const navItems = buildTree(null); // Start with root items (menuid null or missing)
+        const navItems = buildTree(null);
         setNavigationItems(navItems);
+        
+        // ✅ Notify parent about authorization status
+        if (onAuthorizationStatus) {
+          onAuthorizationStatus(navItems.length > 0);
+        }
       } catch (error) {
         console.error('Error fetching navigation:', error);
+        // ✅ Notify parent that there's no authorization
+        if (onAuthorizationStatus) onAuthorizationStatus(false);
       }
     };
 
     fetchNavigation();
-  }, [userEmail]);
+  }, [userEmail, onAuthorizationStatus]);
 
 
   // Optional: map string menuicon to actual React icon
@@ -137,7 +159,7 @@ const CarfSidebar: React.FC<CarfSidebarProps> = ({
       case 'Settings': return Settings;
       case 'MapPin': return MapPin;
       case 'FileText': return FileText;
-      default: return FileText; // fallback
+      default: return FileText;
     }
   };
 
@@ -181,9 +203,6 @@ const CarfSidebar: React.FC<CarfSidebarProps> = ({
       className="h-full border-r border-gray-700 flex flex-col"
       style={{ width: '300px', backgroundColor: '#343a40' }}
     >
-      {/* Hidden userId */}
-      {/* <div id="hidden-userid" data-userid={userId} className="hidden"></div> */}
-
       {/* Header with Logo */}
       <div className="border-b border-gray-700 flex flex-col items-center py-3">
         <img 

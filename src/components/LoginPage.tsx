@@ -17,6 +17,32 @@ const LoginPage: React.FC<LoginPageProps> = ({ onLogin }) => {
   const [isFirstTimeUser, setIsFirstTimeUser] = useState(false);
   const [error, setError] = useState('');
 
+  // ✅ Whitelist of allowed Gmail addresses
+  const allowedGmailAddresses = [
+    'baldonado0514@gmail.com',
+    'shiterunero@gmail.com'
+  ];
+
+  // ✅ Helper function to determine company based on email domain
+  const getCompanyFromEmail = (email: string): string | null => {
+    // Check if it's a whitelisted Gmail address
+    if (allowedGmailAddresses.includes(email.toLowerCase())) {
+      return 'BPI'; // Default company for whitelisted emails
+    }
+    
+    if (email.endsWith('@bounty.com.ph')) {
+      return 'BPI';
+    } else if (email.endsWith('@chookstogoinc.com.ph')) {
+      return 'CTGI';
+    }
+    return null; // Not an allowed domain
+  };
+
+  // ✅ Validate if email domain is allowed
+  const isAllowedEmail = (email: string): boolean => {
+    return getCompanyFromEmail(email) !== null;
+  };
+
   // Check session and user in Supabase table
   useEffect(() => {
     const checkSession = async () => {
@@ -25,6 +51,14 @@ const LoginPage: React.FC<LoginPageProps> = ({ onLogin }) => {
 
       if (session?.user?.email) {
         const userEmail = session.user.email;
+
+        // ✅ Validate email domain
+        if (!isAllowedEmail(userEmail)) {
+          setError('Access denied. Only authorized email addresses are allowed.');
+          await supabase.auth.signOut(); // Sign out unauthorized user
+          return;
+        }
+
         setEmail(userEmail);
 
         // Check if user exists in Supabase table
@@ -33,7 +67,7 @@ const LoginPage: React.FC<LoginPageProps> = ({ onLogin }) => {
           .select('*')
           .eq('email', userEmail)
           .single();
-        // alert(data);
+
         if (fetchError && fetchError.code !== 'PGRST116') {
           setError('Failed to fetch user data');
           console.error(fetchError);
@@ -54,16 +88,16 @@ const LoginPage: React.FC<LoginPageProps> = ({ onLogin }) => {
 
   const handleGoogleSignIn = async () => {
     try {
-
       const redirectUrl =
-      process.env.NODE_ENV === 'production'
-        ? 'hhttps://carf-eight.vercel.app/'
-        : 'http://localhost:8080';
+        process.env.NODE_ENV === 'production'
+          ? 'https://carf-eight.vercel.app/'
+          : 'http://localhost:8080';
 
-    await supabase.auth.signInWithOAuth({
-      provider: 'google',
-      options: { redirectTo: redirectUrl },
-    });
+      const { error } = await supabase.auth.signInWithOAuth({
+        provider: 'google',
+        options: { redirectTo: redirectUrl },
+      });
+
       if (error) throw error;
     } catch (err: any) {
       console.error(err);
@@ -77,12 +111,30 @@ const LoginPage: React.FC<LoginPageProps> = ({ onLogin }) => {
       return;
     }
 
+    // ✅ Validate email domain before creating user
+    if (!isAllowedEmail(email)) {
+      setError('Access denied. Only authorized email addresses are allowed.');
+      await supabase.auth.signOut();
+      return;
+    }
+
     try {
-      // Insert new user into Supabase table
       const userid = email.split('@')[0];
+      const company = getCompanyFromEmail(email); // ✅ Get company based on email
+      const usergroup = 'salesadmin'; // ✅ Default usergroup
+
+      // ✅ Insert new user with company and usergroup
       const { data, error: insertError } = await supabase
         .from('users')
-        .insert([{ email, fullname: fullName, userid }])
+        .insert([
+          {
+            email,
+            fullname: fullName,
+            userid,
+            company, // ✅ Add company field
+            usergroup, // ✅ Add usergroup field
+          },
+        ])
         .select()
         .single();
 
