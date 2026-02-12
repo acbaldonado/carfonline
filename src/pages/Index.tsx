@@ -41,6 +41,30 @@ const Index = () => {
     };
   }, []);
 
+  useEffect(() => {
+    const { data: listener } = supabase.auth.onAuthStateChange(
+      (event, session) => {
+        console.log("Auth change:", event);
+
+        if (!session) {
+          // ❌ Session gone → logout UI
+          localStorage.removeItem('carfSession');
+          setIsLoggedIn(false);
+          setUserEmail('');
+          setUserId(null);
+
+          toast({
+            title: 'Session expired',
+            description: 'Please login again.',
+          });
+        }
+      }
+    );
+
+    return () => {
+      listener.subscription.unsubscribe();
+    };
+  }, []);
   // Handle login
   const handleLogin = async (email: string, fullName?: string, useridFromDB?: string) => {
     // ✅ Update hidden div with the actual userid
