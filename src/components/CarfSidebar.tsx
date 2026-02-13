@@ -13,7 +13,8 @@ interface CarfSidebarProps {
   userEmail: string;
   onLogout: () => void;
   onUserId?: (id: string) => void;
-  onAuthorizationStatus?: (hasAuthorization: boolean) => void; // ✅ NEW: callback for auth status
+  onAuthorizationStatus?: (hasAuthorization: boolean) => void;
+  onMenuClick?: () => void; // ✅ NEW: Callback when menu item is clicked
 }
 
 const CarfSidebar: React.FC<CarfSidebarProps> = ({ 
@@ -22,7 +23,8 @@ const CarfSidebar: React.FC<CarfSidebarProps> = ({
   userEmail, 
   onLogout,
   onUserId,
-  onAuthorizationStatus // ✅ NEW
+  onAuthorizationStatus,
+  onMenuClick // ✅ NEW
 }) => {
   const [openMenus, setOpenMenus] = useState<{ [key: string]: boolean }>({});
   const [fullName, setFullName] = useState('');
@@ -67,7 +69,6 @@ const CarfSidebar: React.FC<CarfSidebarProps> = ({
 
         if (userError || !userData?.usergroup) {
           console.error('Failed to fetch user group:', userError);
-          // ✅ Notify parent that there's no authorization
           if (onAuthorizationStatus) onAuthorizationStatus(false);
           return;
         }
@@ -81,7 +82,6 @@ const CarfSidebar: React.FC<CarfSidebarProps> = ({
 
         if (authError) {
           console.error('Failed to fetch authorizations:', authError);
-          // ✅ Notify parent that there's no authorization
           if (onAuthorizationStatus) onAuthorizationStatus(false);
           return;
         }
@@ -89,7 +89,7 @@ const CarfSidebar: React.FC<CarfSidebarProps> = ({
         // Create a Set of authorized menu commands for fast lookup
         const authorizedMenuCmds = new Set(authData?.map(auth => auth.menucmd) || []);
 
-        // ✅ Check if user has any authorizations
+        // Check if user has any authorizations
         if (authorizedMenuCmds.size === 0) {
           if (onAuthorizationStatus) onAuthorizationStatus(false);
           setNavigationItems([]);
@@ -104,7 +104,6 @@ const CarfSidebar: React.FC<CarfSidebarProps> = ({
 
         if (schemasError || !schemasData) {
           console.error('Failed to fetch schemas:', schemasError);
-          // ✅ Notify parent that there's no authorization
           if (onAuthorizationStatus) onAuthorizationStatus(false);
           return;
         }
@@ -132,13 +131,12 @@ const CarfSidebar: React.FC<CarfSidebarProps> = ({
         const navItems = buildTree(null);
         setNavigationItems(navItems);
         
-        // ✅ Notify parent about authorization status
+        // Notify parent about authorization status
         if (onAuthorizationStatus) {
           onAuthorizationStatus(navItems.length > 0);
         }
       } catch (error) {
         console.error('Error fetching navigation:', error);
-        // ✅ Notify parent that there's no authorization
         if (onAuthorizationStatus) onAuthorizationStatus(false);
       }
     };
@@ -146,8 +144,7 @@ const CarfSidebar: React.FC<CarfSidebarProps> = ({
     fetchNavigation();
   }, [userEmail, onAuthorizationStatus]);
 
-
-  // Optional: map string menuicon to actual React icon
+  // Map string menuicon to actual React icon
   const mapIcon = (iconName: string) => {
     switch(iconName) {
       case 'Users': return Users;
@@ -174,23 +171,28 @@ const CarfSidebar: React.FC<CarfSidebarProps> = ({
         <Button
           variant="ghost"
           className={`w-full justify-start text-left mb-1 flex items-center text-white ${
-            depth > 0 ? 'pl-8 py-2 h-auto text-sm' : 'py-3 h-auto'
+            depth > 0 ? 'pl-8 py-1.5 md:py-2 h-auto text-xs md:text-sm' : 'py-2 md:py-3 h-auto text-sm md:text-base'
           } ${isActive ? 'bg-accent font-medium' : 'hover:bg-gray-700 hover:text-[#635e5e]'}`}
           onClick={() => {
-            if (hasChildren) toggleMenu(item.id);
-            else onTabChange(item.id);
+            if (hasChildren) {
+              toggleMenu(item.id);
+            } else {
+              onTabChange(item.id);
+              // ✅ NEW: Call onMenuClick when actual menu item is clicked (not parent with children)
+              if (onMenuClick) onMenuClick();
+            }
           }}
         >
-          <item.icon className={`${depth > 0 ? 'h-3 w-3' : 'h-4 w-4'} mr-3`} />
-          {item.label}
+          <item.icon className={`${depth > 0 ? 'h-3 w-3' : 'h-3.5 w-3.5 md:h-4 md:w-4'} mr-2 md:mr-3 flex-shrink-0`} />
+          <span className="truncate">{item.label}</span>
           {hasChildren && (
-            <span className="ml-auto">
-              {isOpen ? <ChevronDown className="h-4 w-4" /> : <ChevronRight className="h-4 w-4" />}
+            <span className="ml-auto flex-shrink-0">
+              {isOpen ? <ChevronDown className="h-3.5 w-3.5 md:h-4 md:w-4" /> : <ChevronRight className="h-3.5 w-3.5 md:h-4 md:w-4" />}
             </span>
           )}
         </Button>
         {hasChildren && isOpen && (
-          <div className="ml-2">
+          <div className="ml-1 md:ml-2">
             {item.children.map((child: any) => renderNavItem(child, 1))}
           </div>
         )}
@@ -201,59 +203,76 @@ const CarfSidebar: React.FC<CarfSidebarProps> = ({
   return (
     <div
       className="h-full border-r border-gray-700 flex flex-col"
-      style={{ width: '300px', backgroundColor: '#343a40' }}
+      style={{ 
+        width: '100%',
+        maxWidth: '300px',
+        backgroundColor: '#343a40',
+        maxHeight: '100dvh', // Use dvh for better mobile support
+        height: '100dvh'
+      }}
     >
-      {/* Header with Logo */}
-      <div className="border-b border-gray-700 flex flex-col items-center py-3">
+      {/* Header with Logo - Responsive sizing */}
+      <div className="border-b border-gray-700 flex flex-col items-center py-2 md:py-3 flex-shrink-0">
         <img 
           src="https://bounty.com.ph/wp-content/uploads/2022/07/Site-Logo-Bounty.webp" 
           alt="Bounty Logo" 
-          className="max-h-20 object-contain mb-1"
+          className="h-12 md:h-16 lg:max-h-20 object-contain mb-1"
         />
-        <p className="text-sm font-semibold text-white leading-tight">
+        <p className="text-xs md:text-sm font-semibold text-white leading-tight px-2 text-center">
           Bounty day {fullName || 'Loading...'}
         </p>
       </div>
 
-      {/* Navigation */}
-      <div className="flex-1 p-4 overflow-y-auto no-scrollbar">
-        <nav className="space-y-1">
+      {/* Navigation - Scrollable with proper height constraint */}
+      <div 
+        className="flex-1 p-2 md:p-4 overflow-y-auto no-scrollbar"
+        style={{
+          minHeight: 0, // Important for flex-1 with overflow to work properly
+        }}
+      >
+        <nav className="space-y-0.5 md:space-y-1">
           {navigationItems.length > 0 ? (
             navigationItems.map(item => renderNavItem(item))
           ) : (
-            <div className="text-gray-400 text-sm text-center py-4">
+            <div className="text-gray-400 text-xs md:text-sm text-center py-4">
               No authorized menu items
             </div>
           )}
         </nav>
       </div>
 
-      {/* Submit Ticket Button */}
-      <div className="p-4 border-t border-gray-700">
+      {/* Submit Ticket Button - Compact on mobile */}
+      <div className="p-2 md:p-4 border-t border-gray-700 flex-shrink-0">
         <Button 
-          className="w-full bg-destructive hover:bg-destructive/90 text-white font-bold py-3"
-          onClick={() => onTabChange('submit-ticket')}
+          className="w-full bg-destructive hover:bg-destructive/90 text-white font-bold py-2 md:py-3 text-xs md:text-sm"
+          onClick={() => {
+            onTabChange('submit-ticket');
+            // ✅ NEW: Also hide sidebar when submit ticket is clicked
+            if (onMenuClick) onMenuClick();
+          }}
         >
           📋 SUBMIT A TICKET
         </Button>
       </div>
 
-      {/* User Section */}
-      <div className="p-4 border-t border-gray-700 text-white">
-        <div className="flex items-center justify-between">
-          <div className="flex items-center space-x-2">
-            <div className="w-8 h-8 bg-gray-600 rounded-full flex items-center justify-center">
+      {/* User Section - Always visible at bottom */}
+      <div className="p-2 md:p-4 border-t border-gray-700 text-white flex-shrink-0">
+        <div className="flex items-center justify-between gap-2">
+          <div className="flex items-center space-x-2 min-w-0 flex-1">
+            <div className="w-7 h-7 md:w-8 md:h-8 bg-gray-600 rounded-full flex items-center justify-center flex-shrink-0">
               <span className="text-xs font-medium text-white">
                 {userEmail.charAt(0).toUpperCase()}
               </span>
             </div>
-            <span className="text-sm truncate max-w-[140px]">{userEmail}</span>
+            <span className="text-xs md:text-sm truncate">
+              {userEmail}
+            </span>
           </div>
           <Button
             variant="ghost"
             size="sm"
             onClick={onLogout}
-            className="text-white hover:text-gray-300"
+            className="text-white hover:text-gray-300 text-xs md:text-sm px-2 md:px-3 py-1 md:py-2 flex-shrink-0"
           >
             Logout
           </Button>

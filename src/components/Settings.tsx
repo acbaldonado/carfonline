@@ -36,7 +36,7 @@ export default function SettingsUI() {
         .from('system_settings')
         .select('*')
         .order('id', { ascending: true })
-        .limit(1); // fetch first row only
+        .limit(1);
 
       if (error) {
         console.error('Error fetching settings:', error);
@@ -104,30 +104,32 @@ export default function SettingsUI() {
       console.error('Unexpected error:', err);
     }
   };
+
   useEffect(() => {
     loadSettings();
   }, []);
+
   return (
-    <div className="no-scrollbar h-screen overflow-auto text-white p-6">
+    <div className="no-scrollbar h-screen overflow-auto text-white p-3 sm:p-6">
       <div className="max-w-5xl mx-auto flex flex-col min-h-full">
         {/* Header */}
-        <div className="flex items-center gap-3 mb-8">
-          <Settings className="w-8 h-8 text-red-500" />
-          <h1 className="text-3xl font-bold">System Settings</h1>
+        <div className="flex items-center gap-2 sm:gap-3 mb-4 sm:mb-8">
+          <Settings className="w-6 h-6 sm:w-8 sm:h-8 text-red-500" />
+          <h1 className="text-xl sm:text-3xl font-bold">System Settings</h1>
         </div>
 
         {/* Settings Card */}
         <div className="bg-[#1f2937] rounded-lg shadow-xl border border-gray-700 flex flex-col flex-1">
           
           {/* Section Header */}
-          <div className="border-b border-gray-700 p-6 flex items-center justify-between">
+          <div className="border-b border-gray-700 p-4 sm:p-6 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
             <div>
-              <h2 className="text-xl font-semibold mb-1">Environment Configuration</h2>
-              <p className="text-gray-400 text-sm">Configure your Supabase connection and data sources</p>
+              <h2 className="text-lg sm:text-xl font-semibold mb-1">Environment Configuration</h2>
+              <p className="text-gray-400 text-xs sm:text-sm">Configure your Supabase connection and data sources</p>
             </div>
             <button
               onClick={() => setShowKeys(!showKeys)}
-              className="flex items-center gap-2 px-4 py-2 bg-gray-700 hover:bg-gray-600 rounded-md transition-colors"
+              className="flex items-center justify-center gap-2 px-4 py-2 bg-gray-700 hover:bg-gray-600 rounded-md transition-colors text-sm sm:text-base whitespace-nowrap"
             >
               {showKeys ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
               {showKeys ? 'Hide' : 'Show'} Keys
@@ -135,10 +137,10 @@ export default function SettingsUI() {
           </div>
 
           {/* Form Content */}
-          <div className="p-6 space-y-6 flex-1 overflow-auto">
+          <div className="p-4 sm:p-6 space-y-4 sm:space-y-6 flex-1 overflow-auto">
             {/* Supabase Project ID */}
             <div className="space-y-2">
-              <label className="flex items-center gap-2 text-sm font-medium text-gray-300">
+              <label className="flex items-center gap-2 text-xs sm:text-sm font-medium text-gray-300">
                 <Database className="w-4 h-4 text-blue-400" />
                 Supabase Project ID
               </label>
@@ -146,7 +148,7 @@ export default function SettingsUI() {
                 type="text"
                 value={config.projectId}
                 onChange={(e) => handleChange('projectId', e.target.value)}
-                className="w-full px-4 py-3 bg-[#374151] border border-gray-600 rounded-md focus:outline-none focus:ring-2 focus:ring-red-500 focus:border-transparent text-white"
+                className="w-full px-3 py-2 sm:px-4 sm:py-3 bg-[#374151] border border-gray-600 rounded-md focus:outline-none focus:ring-2 focus:ring-red-500 focus:border-transparent text-white text-sm sm:text-base"
                 placeholder="Enter project ID"
               />
               <p className="text-xs text-gray-500">Your Supabase project identifier</p>
@@ -154,7 +156,7 @@ export default function SettingsUI() {
 
             {/* Supabase URL */}
             <div className="space-y-2">
-              <label className="flex items-center gap-2 text-sm font-medium text-gray-300">
+              <label className="flex items-center gap-2 text-xs sm:text-sm font-medium text-gray-300">
                 <Globe className="w-4 h-4 text-green-400" />
                 Supabase URL
               </label>
@@ -162,7 +164,7 @@ export default function SettingsUI() {
                 type="text"
                 value={config.url}
                 onChange={(e) => handleChange('url', e.target.value)}
-                className="w-full px-4 py-3 bg-[#374151] border border-gray-600 rounded-md focus:outline-none focus:ring-2 focus:ring-red-500 focus:border-transparent text-white"
+                className="w-full px-3 py-2 sm:px-4 sm:py-3 bg-[#374151] border border-gray-600 rounded-md focus:outline-none focus:ring-2 focus:ring-red-500 focus:border-transparent text-white text-sm sm:text-base"
                 placeholder="https://your-project.supabase.co"
               />
               <p className="text-xs text-gray-500">Your Supabase project URL</p>
@@ -170,7 +172,7 @@ export default function SettingsUI() {
 
             {/* Publishable Key */}
             <div className="space-y-2">
-              <label className="flex items-center gap-2 text-sm font-medium text-gray-300">
+              <label className="flex items-center gap-2 text-xs sm:text-sm font-medium text-gray-300">
                 <Key className="w-4 h-4 text-yellow-400" />
                 Publishable Key (Anon)
               </label>
@@ -178,7 +180,7 @@ export default function SettingsUI() {
                 value={showKeys ? config.publishableKey : maskKey(config.publishableKey)}
                 onChange={(e) => handleChange('publishableKey', e.target.value)}
                 rows={showKeys ? 4 : 2}
-                className="w-full px-4 py-3 bg-[#374151] border border-gray-600 rounded-md focus:outline-none focus:ring-2 focus:ring-red-500 focus:border-transparent text-white font-mono text-sm resize-none"
+                className="w-full px-3 py-2 sm:px-4 sm:py-3 bg-[#374151] border border-gray-600 rounded-md focus:outline-none focus:ring-2 focus:ring-red-500 focus:border-transparent text-white font-mono text-xs sm:text-sm resize-none"
                 placeholder="Enter publishable key"
               />
               <p className="text-xs text-gray-500">Your Supabase anon/public key (safe for client-side use)</p>
@@ -186,14 +188,14 @@ export default function SettingsUI() {
 
             {/* Customer Source */}
             <div className="space-y-2">
-              <label className="flex items-center gap-2 text-sm font-medium text-gray-300">
+              <label className="flex items-center gap-2 text-xs sm:text-sm font-medium text-gray-300">
                 <Database className="w-4 h-4 text-purple-400" />
                 Customer Data Source
               </label>
               <select
                 value={config.customerSource}
                 onChange={(e) => handleChange('customerSource', e.target.value)}
-                className="w-full px-4 py-3 bg-[#374151] border border-gray-600 rounded-md focus:outline-none focus:ring-2 focus:ring-red-500 focus:border-transparent text-white cursor-pointer"
+                className="w-full px-3 py-2 sm:px-4 sm:py-3 bg-[#374151] border border-gray-600 rounded-md focus:outline-none focus:ring-2 focus:ring-red-500 focus:border-transparent text-white cursor-pointer text-sm sm:text-base"
               >
                 <option value="GSHEET">Google Sheets</option>
                 <option value="PROD">Production Database</option>
@@ -202,12 +204,12 @@ export default function SettingsUI() {
             </div>
             
             {/* GOOGLE SHEET SECTION */}
-            <div className="p-4 rounded-lg border border-blue-500 bg-blue-900/30 space-y-6">
-              <h3 className="text-lg font-semibold text-blue-300">Google Sheet Configuration</h3>
+            <div className="p-3 sm:p-4 rounded-lg border border-blue-500 bg-blue-900/30 space-y-4 sm:space-y-6">
+              <h3 className="text-base sm:text-lg font-semibold text-blue-300">Google Sheet Configuration</h3>
 
               {/* Sheet ID */}
               <div className="space-y-2">
-                <label className="flex items-center gap-2 text-sm font-medium text-blue-300">
+                <label className="flex items-center gap-2 text-xs sm:text-sm font-medium text-blue-300">
                   <Database className="w-4 h-4 text-blue-400" />
                   Google Sheet ID
                 </label>
@@ -215,50 +217,48 @@ export default function SettingsUI() {
                   type="text"
                   value={config.sheetId}
                   onChange={(e) => handleChange('sheetId', e.target.value)}
-                  className="w-full px-4 py-3 bg-[#374151] border border-gray-600 rounded-md focus:outline-none focus:ring-2 focus:ring-red-500 focus:border-transparent text-white"
+                  className="w-full px-3 py-2 sm:px-4 sm:py-3 bg-[#374151] border border-gray-600 rounded-md focus:outline-none focus:ring-2 focus:ring-red-500 focus:border-transparent text-white text-sm sm:text-base"
                   placeholder="Enter Google Sheet ID"
                 />
-              <p className="text-xs text-gray-500">Your Google Sheet ID</p>
+                <p className="text-xs text-gray-500">Your Google Sheet ID</p>
               </div>
 
               {/* Sheet API Key */}
               <div className="space-y-2">
-                <label className="flex items-center gap-2 text-sm font-medium text-blue-300">
+                <label className="flex items-center gap-2 text-xs sm:text-sm font-medium text-blue-300">
                   <Key className="w-4 h-4 text-yellow-400" />
                   Google Sheet API Key
                 </label>
-
                 <input
                   type="text"
                   value={config.sheetAPIkey}
                   onChange={(e) => handleChange('sheetAPIkey', e.target.value)}
-                  className="w-full px-4 py-3 bg-[#374151] border border-gray-600 rounded-md focus:outline-none focus:ring-2 focus:ring-red-500 focus:border-transparent text-white"
+                  className="w-full px-3 py-2 sm:px-4 sm:py-3 bg-[#374151] border border-gray-600 rounded-md focus:outline-none focus:ring-2 focus:ring-red-500 focus:border-transparent text-white text-sm sm:text-base"
                   placeholder="Enter Google Sheet API Key"
                 />
-              <p className="text-xs text-gray-500">Your Google Sheet API Key</p>
+                <p className="text-xs text-gray-500">Your Google Sheet API Key</p>
               </div>
 
               {/* Sheet Range */}
               <div className="space-y-2">
-                <label className="flex items-center gap-2 text-sm font-medium text-blue-300">
+                <label className="flex items-center gap-2 text-xs sm:text-sm font-medium text-blue-300">
                   <Database className="w-4 h-4 text-green-400" />
                   Google Sheet Range
                 </label>
-                 <input
+                <input
                   type="text"
                   value={config.sheetRange}
                   onChange={(e) => handleChange('sheetRange', e.target.value)}
-                  className="w-full px-4 py-3 bg-[#374151] border border-gray-600 rounded-md focus:outline-none focus:ring-2 focus:ring-red-500 focus:border-transparent text-white"
+                  className="w-full px-3 py-2 sm:px-4 sm:py-3 bg-[#374151] border border-gray-600 rounded-md focus:outline-none focus:ring-2 focus:ring-red-500 focus:border-transparent text-white text-sm sm:text-base"
                   placeholder="Example: A2:G500"
                 />
-              <p className="text-xs text-gray-500">Your Google Sheet Range</p>
+                <p className="text-xs text-gray-500">Your Google Sheet Range</p>
               </div>
             </div>
 
-
             {/* Attachment Drive ID */}
             <div className="space-y-2">
-              <label className="flex items-center gap-2 text-sm font-medium text-gray-300">
+              <label className="flex items-center gap-2 text-xs sm:text-sm font-medium text-gray-300">
                 <Database className="w-4 h-4 text-blue-400" />
                 Drive Attachment ID
               </label>
@@ -266,39 +266,44 @@ export default function SettingsUI() {
                 type="text"
                 value={config.attachmentLink}
                 onChange={(e) => handleChange('attachmentLink', e.target.value)}
-                className="w-full px-4 py-3 bg-[#374151] border border-gray-600 rounded-md focus:outline-none focus:ring-2 focus:ring-red-500 focus:border-transparent text-white"
-                placeholder="Enter project ID"
+                className="w-full px-3 py-2 sm:px-4 sm:py-3 bg-[#374151] border border-gray-600 rounded-md focus:outline-none focus:ring-2 focus:ring-red-500 focus:border-transparent text-white text-sm sm:text-base"
+                placeholder="Enter Drive Attachment ID"
               />
               <p className="text-xs text-gray-500">Your Drive Attachment ID</p>
             </div>
           </div>
 
           {/* Footer Actions - sticky */}
-          <div className="border-t border-gray-700 p-6 flex items-center justify-between bg-[#1a202c] sticky bottom-0">
-            <div className="flex items-center gap-2">
-              {saved && (
-                <div className="flex items-center gap-2 text-green-400 animate-fade-in">
-                  <Check className="w-5 h-5" />
-                  <span className="text-sm font-medium">Configuration saved successfully</span>
-                </div>
-              )}
-            </div>
-            <div className="flex gap-3">
+          <div className="border-t border-gray-700 p-3 sm:p-6 bg-[#1a202c] sticky bottom-0">
+            {/* Success message - full width on mobile */}
+            {saved && (
+              <div className="flex items-center justify-center gap-2 text-green-400 animate-fade-in mb-3 sm:mb-0">
+                <Check className="w-4 h-4 sm:w-5 sm:h-5" />
+                <span className="text-xs sm:text-sm font-medium">Configuration saved successfully</span>
+              </div>
+            )}
+            
+            {/* Buttons */}
+            <div className="flex flex-col sm:flex-row gap-2 sm:gap-3 sm:justify-end">
               <button
                 onClick={() => setConfig({
                   projectId: '',
                   publishableKey: '',
                   url: '',
-                  customerSource: 'GSHEET'
+                  customerSource: 'GSHEET',
+                  attachmentLink:'',
+                  sheetId:'',
+                  sheetAPIkey:'',
+                  sheetRange:''
                 })}
-                className="flex items-center gap-2 px-5 py-2.5 bg-gray-700 hover:bg-gray-600 rounded-md transition-colors font-medium"
+                className="flex items-center justify-center gap-2 px-4 sm:px-5 py-2 sm:py-2.5 bg-gray-700 hover:bg-gray-600 rounded-md transition-colors font-medium text-sm sm:text-base order-2 sm:order-1"
               >
                 <X className="w-4 h-4" />
                 Reset
               </button>
               <button
                 onClick={handleSave}
-                className="flex items-center gap-2 px-5 py-2.5 bg-red-600 hover:bg-red-700 rounded-md transition-colors font-medium shadow-lg"
+                className="flex items-center justify-center gap-2 px-4 sm:px-5 py-2 sm:py-2.5 bg-red-600 hover:bg-red-700 rounded-md transition-colors font-medium shadow-lg text-sm sm:text-base order-1 sm:order-2"
               >
                 <Save className="w-4 h-4" />
                 Save Configuration

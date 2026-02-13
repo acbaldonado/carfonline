@@ -48,13 +48,15 @@ const DashboardLayout: React.FC<DashboardLayoutProps> = ({ userEmail, userId, on
   const [showSettings, setShowSettings] = useState(false);
   const [previousTab, setPreviousTab] = useState<string>('customer-list');
   const [showNotifications, setShowNotifications] = useState(false);
-  const [hasAuthorization, setHasAuthorization] = useState<boolean>(true); // ✅ NEW: track authorization status
-  const [userGroup, setUserGroup] = useState<string>(''); // ✅ NEW: track user's usergroup
+  const [hasAuthorization, setHasAuthorization] = useState<boolean>(true);
+  const [userGroup, setUserGroup] = useState<string>('');
 
-  // ✅ Get userid from global state
+  const isMobile = () => {
+    return window.innerWidth < 768;
+  };
+
   const userid = (window as any).getGlobal?.('userid') || '';
 
-  // ✅ Use notifications hook with real-time subscription
   const {
     notifications,
     unreadCount,
@@ -65,7 +67,6 @@ const DashboardLayout: React.FC<DashboardLayoutProps> = ({ userEmail, userId, on
     refreshNotifications,
   } = useNotifications(userid, true);
 
-  // ✅ Fetch user's usergroup on mount
   useEffect(() => {
     const fetchUserGroup = async () => {
       if (!userEmail) return;
@@ -83,6 +84,32 @@ const DashboardLayout: React.FC<DashboardLayoutProps> = ({ userEmail, userId, on
 
     fetchUserGroup();
   }, [userEmail]);
+
+  // ✅ Prevent body scroll on mobile - force fixed viewport
+  useEffect(() => {
+    // Prevent default scroll on body
+    document.body.style.overflow = 'hidden';
+    document.body.style.position = 'fixed';
+    document.body.style.width = '100%';
+    document.body.style.height = '100%';
+    
+    // Set viewport height CSS variable for mobile
+    const setVH = () => {
+      const vh = window.innerHeight * 0.01;
+      document.documentElement.style.setProperty('--vh', `${vh}px`);
+    };
+    
+    setVH();
+    window.addEventListener('resize', setVH);
+    
+    return () => {
+      document.body.style.overflow = '';
+      document.body.style.position = '';
+      document.body.style.width = '';
+      document.body.style.height = '';
+      window.removeEventListener('resize', setVH);
+    };
+  }, []);
 
   const handleTabChange = (tab: string) => {
     setActiveTab(tab);
@@ -108,12 +135,16 @@ const DashboardLayout: React.FC<DashboardLayoutProps> = ({ userEmail, userId, on
     setActiveTab(previousTab);
   };
 
-  // ✅ NEW: Handle authorization status from sidebar
   const handleAuthorizationStatus = (status: boolean) => {
     setHasAuthorization(status);
   };
 
-  // ✅ Handle notification click
+  const handleMenuClick = () => {
+    if (isMobile()) {
+      setIsCollapsed(true);
+    }
+  };
+
   const handleNotificationClick = async (notification: any) => {
     if (!notification.is_read) {
       await markAsRead(notification.id);
@@ -124,7 +155,6 @@ const DashboardLayout: React.FC<DashboardLayoutProps> = ({ userEmail, userId, on
     }
   };
 
-  // ✅ Get notification icon based on type
   const getNotificationIcon = (type: string) => {
     switch (type) {
       case 'APPROVAL':
@@ -140,7 +170,6 @@ const DashboardLayout: React.FC<DashboardLayoutProps> = ({ userEmail, userId, on
     }
   };
 
-  // ✅ Format time ago
   const formatTimeAgo = (date: string) => {
     try {
       return formatDistanceToNow(new Date(date), { addSuffix: true });
@@ -155,7 +184,6 @@ const DashboardLayout: React.FC<DashboardLayoutProps> = ({ userEmail, userId, on
     day: 'numeric',
   });
 
-  // ✅ NEW: Unauthorized Access Component - Simple version matching sidebar style
   const UnauthorizedAccess = () => (
     <div className="flex items-center justify-center h-full min-h-[400px]">
       <div className="text-center px-6">
@@ -165,12 +193,10 @@ const DashboardLayout: React.FC<DashboardLayoutProps> = ({ userEmail, userId, on
   );
 
   const renderContent = () => {
-    // ✅ Show Submit Ticket Form if active (should always be accessible)
     if (showSubmitTicketForm) {
       return <SubmitTicketForm onBack={handleBackToCustomerList} onSuccess={handleBackToCustomerList} />;
     }
 
-    // ✅ Show forms if active
     if (showNewCustomerForm) {
       return (
         <NewCustomerForm
@@ -184,12 +210,10 @@ const DashboardLayout: React.FC<DashboardLayoutProps> = ({ userEmail, userId, on
       );
     }
 
-    // ✅ Check authorization before showing any content (except forms above)
     if (!hasAuthorization) {
       return <UnauthorizedAccess />;
     }
 
-    // ✅ Render authorized content based on active tab
     switch (activeTab) {
       case 'approved':
         return <ApprovedCustomerList onEditCustomer={handleEditCustomer} />;
@@ -242,18 +266,18 @@ const DashboardLayout: React.FC<DashboardLayoutProps> = ({ userEmail, userId, on
       case 'customerlist':
       case 'customer-list':
       default:
-        // ✅ When authorized, show CustomerList as default
         return <CustomerList userId={userId} onNewCustomer={handleNewCustomer} onEditCustomer={handleEditCustomer} />;
     }
   };
 
   return (
-    <div className="h-screen flex bg-background overflow-x-auto overflow-y-hidden no-scrollbar">
+    <div className="flex bg-background" style={{ height: 'calc(var(--vh, 1vh) * 100)' }}>
       {/* Sidebar */}
       <div
-        className={`fixed top-0 left-0 h-screen bg-gray-800 transition-all duration-300 ease-in-out z-30 ${
+        className={`fixed top-0 left-0 bg-gray-800 transition-all duration-300 ease-in-out z-40 md:z-30 ${
           isCollapsed ? 'w-0 overflow-hidden' : 'w-[300px]'
         }`}
+        style={{ height: 'calc(var(--vh, 1vh) * 100)' }}
       >
         <div className="sticky top-0 h-full">
           <CarfSidebar
@@ -261,26 +285,39 @@ const DashboardLayout: React.FC<DashboardLayoutProps> = ({ userEmail, userId, on
             onTabChange={handleTabChange}
             userEmail={userEmail}
             onLogout={onLogout}
-            onAuthorizationStatus={handleAuthorizationStatus} // ✅ NEW: Pass callback
+            onAuthorizationStatus={handleAuthorizationStatus}
+            onMenuClick={handleMenuClick}
           />
         </div>
       </div>
 
+      {/* Overlay for mobile when sidebar is open */}
+      {!isCollapsed && isMobile() && (
+        <div
+          className="fixed inset-0 bg-black bg-opacity-50 z-30 md:hidden"
+          onClick={() => setIsCollapsed(true)}
+        />
+      )}
+
       {/* Main Column */}
       <div
-        className={`flex-1 flex flex-col min-h-screen min-w-0 transition-all duration-300 ease-in-out ${
-          !isCollapsed ? 'ml-[300px]' : 'ml-0'
+        className={`flex-1 flex flex-col min-w-0 transition-all duration-300 ease-in-out ${
+          !isCollapsed ? 'md:ml-[300px] ml-0' : 'ml-0'
         }`}
+        style={{ height: 'calc(var(--vh, 1vh) * 100)' }}
       >
         {/* Header */}
-        <header className="h-16 bg-card border-b border-border px-6 flex items-center justify-between sticky top-0 z-20">
-          <div className="flex items-center space-x-4">
+        <header 
+          id="dashboard-header"
+          className="h-14 md:h-16 bg-card border-b border-border px-3 md:px-6 flex items-center justify-between flex-shrink-0 z-20"
+        >
+          <div className="flex items-center space-x-2 md:space-x-4 min-w-0 flex-1">
             <button
               onClick={() => setIsCollapsed(!isCollapsed)}
-              className="p-2 hover:bg-muted rounded-md transition-colors"
+              className="p-1.5 md:p-2 hover:bg-muted rounded-md transition-colors flex-shrink-0"
               aria-label="Toggle sidebar"
             >
-              <Menu className="h-5 w-5 sm:h-6 sm:w-6 text-foreground" />
+              <Menu className="h-5 w-5 md:h-6 md:w-6 text-foreground" />
             </button>
             <h2
               onClick={() => {
@@ -289,23 +326,23 @@ const DashboardLayout: React.FC<DashboardLayoutProps> = ({ userEmail, userId, on
                 setShowSubmitTicketForm(false);
                 setEditingCustomer(null);
               }}
-              className="text-lg sm:text-xl font-semibold text-foreground cursor-pointer hover:opacity-80 transition"
+              className="text-sm md:text-lg lg:text-xl font-semibold text-foreground cursor-pointer hover:opacity-80 transition truncate"
             >
               ONLINE CARF
             </h2>
-
           </div>
-          <div className="flex items-center space-x-4 relative">
+          
+          <div className="flex items-center space-x-2 md:space-x-4 relative flex-shrink-0">
             {/* Notification Bell with Dropdown */}
             <div className="relative">
               <button
                 onClick={() => setShowNotifications(!showNotifications)}
-                className="relative p-2 rounded-full hover:bg-muted transition-colors"
+                className="relative p-1.5 md:p-2 rounded-full hover:bg-muted transition-colors"
                 aria-label="Notifications"
               >
-                <Bell className="h-4 w-4 sm:h-5 sm:w-5 text-foreground" />
+                <Bell className="h-4 w-4 md:h-5 md:w-5 text-foreground" />
                 {unreadCount > 0 && (
-                  <span className="absolute -top-0.5 -right-0.5 bg-red-500 text-white text-[10px] font-bold w-4 h-4 rounded-full flex items-center justify-center">
+                  <span className="absolute -top-0.5 -right-0.5 bg-red-500 text-white text-[9px] md:text-[10px] font-bold w-3.5 h-3.5 md:w-4 md:h-4 rounded-full flex items-center justify-center">
                     {unreadCount > 99 ? '99+' : unreadCount}
                   </span>
                 )}
@@ -313,10 +350,10 @@ const DashboardLayout: React.FC<DashboardLayoutProps> = ({ userEmail, userId, on
 
               {/* Notifications Dropdown */}
               {showNotifications && (
-                <div className="absolute right-0 mt-2 w-96 bg-card border border-border rounded-xl shadow-lg z-50 max-h-[500px] overflow-hidden flex flex-col">
+                <div className="absolute right-0 mt-2 w-[calc(100vw-2rem)] max-w-96 bg-card border border-border rounded-xl shadow-lg z-50 max-h-[500px] overflow-hidden flex flex-col">
                   {/* Header */}
-                  <div className="px-4 py-3 border-b border-border flex items-center justify-between sticky top-0 bg-card">
-                    <h3 className="font-semibold text-foreground">Notifications</h3>
+                  <div className="px-3 md:px-4 py-2 md:py-3 border-b border-border flex items-center justify-between sticky top-0 bg-card">
+                    <h3 className="font-semibold text-sm md:text-base text-foreground">Notifications</h3>
                     <div className="flex items-center gap-2">
                       {unreadCount > 0 && (
                         <button
@@ -416,9 +453,9 @@ const DashboardLayout: React.FC<DashboardLayoutProps> = ({ userEmail, userId, on
             <div className="relative">
               <button
                 onClick={() => setShowUserMenu((prev) => !prev)}
-                className="flex items-center space-x-2 p-2 rounded-full hover:bg-muted transition-colors"
+                className="flex items-center space-x-2 p-1 md:p-2 rounded-full hover:bg-muted transition-colors"
               >
-                <div className="w-8 h-8 bg-gradient-to-r from-indigo-400 to-blue-500 rounded-full flex items-center justify-center text-white font-semibold">
+                <div className="w-7 h-7 md:w-8 md:h-8 bg-gradient-to-r from-indigo-400 to-blue-500 rounded-full flex items-center justify-center text-white font-semibold text-sm">
                   {userEmail?.charAt(0).toUpperCase() || 'U'}
                 </div>
               </button>
@@ -438,7 +475,6 @@ const DashboardLayout: React.FC<DashboardLayoutProps> = ({ userEmail, userId, on
                   >
                     <MessageSquare className="h-4 w-4" /> Messages
                   </button>
-                  {/* ✅ Only show Settings if user is sysadmin */}
                   {userGroup === 'sysadmin' && (
                     <button
                       onClick={() => {
@@ -459,19 +495,18 @@ const DashboardLayout: React.FC<DashboardLayoutProps> = ({ userEmail, userId, on
 
         {/* Content */}
         <main
-          className="flex-1 p-4 md:p-6 bg-background overflow-x-auto overflow-y-hidden min-h-0"
-          style={{ paddingBottom: '3rem' }}
+          className="flex-1 p-3 md:p-4 lg:p-6 bg-background overflow-y-auto overflow-x-hidden min-h-0"
         >
-          <div className="min-w-full h-full flex flex-col">{renderContent()}</div>
+          <div className="min-w-full">{renderContent()}</div>
         </main>
 
-        {/* Sticky Footer */}
+        {/* Footer */}
         <footer
-          className="h-10 bg-card border-t border-border flex justify-between items-center px-6 text-xs text-muted-foreground fixed bottom-0 right-0 z-40 transition-all duration-300"
-          style={{ left: isCollapsed ? '0' : '300px' }}
+          className="h-10 bg-card border-t border-border flex justify-between items-center px-3 md:px-6 text-xs text-muted-foreground flex-shrink-0 z-10"
         >
-          <span>Online CARF</span>
-          <span>Version 3.0 {today}</span>
+          <span className="truncate">Online CARF</span>
+          <span className="hidden sm:inline">Version 3.0</span>
+          <span className="text-[10px] sm:text-xs">{today}</span>
         </footer>
       </div>
     </div>

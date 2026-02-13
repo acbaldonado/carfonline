@@ -1,7 +1,8 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { Send, Video, MoreVertical, Search, Paperclip, Smile, Edit, X } from 'lucide-react';
+import { Send, Video, MoreVertical, Search, Paperclip, Smile, Edit, X, ArrowLeft, Menu } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import type { Database } from '@/integrations/supabase/types';
+
 interface Message {
   id: number;
   text: string;
@@ -13,7 +14,7 @@ interface Contact {
   id: number | string;
   name: string;
   company?: string;
-  email:string;
+  email: string;
   lastMessage?: string;
   time?: string;
   unread?: number;
@@ -31,6 +32,9 @@ const MessagingUI: React.FC = () => {
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const [messagesMap, setMessagesMap] = useState<{ [contactId: string]: Message[] }>({});
 
+  // ✅ Check if mobile
+  const isMobile = () => window.innerWidth < 768;
+
   const scrollToBottom = () => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
   };
@@ -40,47 +44,46 @@ const MessagingUI: React.FC = () => {
   }, [messages]);
 
   useEffect(() => {
-  if (!selectedContact) return;
+    if (!selectedContact) return;
     setMessages(messagesMap[selectedContact.id] || []);
-}, [selectedContact, messagesMap]);
+  }, [selectedContact, messagesMap]);
 
   const handleSendMessage = async () => {
     if (!inputText.trim() || !selectedContact) return;
 
-    const sender = window.getGlobal ? window.getGlobal('userid') : null
+    const sender = window.getGlobal ? window.getGlobal('userid') : null;
     if (!sender) {
-        console.error('Sender ID is missing. Cannot proceed.');
-        return; // stop execution if sender is required
-        }
-    
+      console.error('Sender ID is missing. Cannot proceed.');
+      return;
+    }
+
     const { data, error } = await supabase
-        .from('messages')
-        .insert([
+      .from('messages')
+      .insert([
         {
-            sender_id: sender,
-            receiver_id: selectedContact.id.toString(),
-            content: inputText.trim(),
+          sender_id: sender,
+          receiver_id: selectedContact.id.toString(),
+          content: inputText.trim(),
         },
-        ])
-        .select();
+      ])
+      .select();
 
     if (error) {
-        console.error('Error sending message:', error.message);
+      console.error('Error sending message:', error.message);
     } else {
-        setMessages((prev) => [
+      setMessages((prev) => [
         ...prev,
         {
-            id: data[0].id,
-            text: data[0].content,
-            sender: 'user',
-            timestamp: new Date(data[0].created_at),
+          id: data[0].id,
+          text: data[0].content,
+          sender: 'user',
+          timestamp: new Date(data[0].created_at),
         },
-        ]);
+      ]);
     }
 
     setInputText('');
-    };
-
+  };
 
   const handleKeyPress = (e: React.KeyboardEvent) => {
     if (e.key === 'Enter' && !e.shiftKey) {
@@ -96,7 +99,7 @@ const MessagingUI: React.FC = () => {
   const getInitials = (name: string) => {
     return name
       .split(' ')
-      .map(word => word[0])
+      .map((word) => word[0])
       .join('')
       .toUpperCase();
   };
@@ -105,9 +108,7 @@ const MessagingUI: React.FC = () => {
     const fetchUsers = async () => {
       if (!showNewMessageModal) return;
 
-      const { data, error } = await supabase
-        .from('users')
-        .select('userid, fullname, company,email');
+      const { data, error } = await supabase.from('users').select('userid, fullname, company,email');
 
       if (error) {
         console.error('Error fetching users:', error.message);
@@ -127,7 +128,7 @@ const MessagingUI: React.FC = () => {
     fetchUsers();
   }, [showNewMessageModal]);
 
-  const filteredContacts = supabaseContacts.filter(contact =>
+  const filteredContacts = supabaseContacts.filter((contact) =>
     contact.name.toLowerCase().includes(searchQuery.toLowerCase())
   );
 
@@ -135,27 +136,28 @@ const MessagingUI: React.FC = () => {
     setSelectedContact(contact);
     setShowNewMessageModal(false);
     setSearchQuery('');
-    if (!contacts.find(c => c.id === contact.id)) {
-      setContacts(prev => [...prev, contact]);
+    if (!contacts.find((c) => c.id === contact.id)) {
+      setContacts((prev) => [...prev, contact]);
     }
     fetchMessagesForContact(contact);
   };
 
-    useEffect(() => {
-      fetchConversations();
-    }, []);
+  useEffect(() => {
+    fetchConversations();
+  }, []);
 
-    const fetchConversations = async () => {
-        const userId = window.getGlobal ? window.getGlobal('userid') : null;
-        if (!userId) {
-        console.error('User ID is missing.');
-        return;
-        }
+  const fetchConversations = async () => {
+    const userId = window.getGlobal ? window.getGlobal('userid') : null;
+    if (!userId) {
+      console.error('User ID is missing.');
+      return;
+    }
 
-        try {
-        const { data: messages, error } = await supabase
-            .from('messages')
-            .select(`
+    try {
+      const { data: messages, error } = await supabase
+        .from('messages')
+        .select(
+          `
             id,
             sender_id,
             receiver_id,
@@ -165,47 +167,40 @@ const MessagingUI: React.FC = () => {
             read_at,
             sender:sender_id(fullname, company, email),
             receiver:receiver_id(fullname, company, email)
-            `)
-            .or(`sender_id.eq.${userId},receiver_id.eq.${userId}`)
-            .order('created_at', { ascending: false })
-            .limit(500); // adjust as needed
+            `
+        )
+        .or(`sender_id.eq.${userId},receiver_id.eq.${userId}`)
+        .order('created_at', { ascending: false })
+        .limit(500);
 
-        if (error) {
-            console.error('Error fetching messages:', error);
-            return;
-        }
-        if (!messages || messages.length === 0) {
-            setContacts([]);
-            return;
-        }
+      if (error) {
+        console.error('Error fetching messages:', error);
+        return;
+      }
+      if (!messages || messages.length === 0) {
+        setContacts([]);
+        return;
+      }
 
-        // Reduce to latest message per contact (other party)
-        const conversationMap: Record<string, any> = {};
-        const unreadCountMap: Record<string, number> = {};
+      const conversationMap: Record<string, any> = {};
+      const unreadCountMap: Record<string, number> = {};
 
-
-        for (const msg of messages) {
-            const otherId = msg.sender_id === userId ? msg.receiver_id : msg.sender_id;
-            // If we've already recorded a message for this otherId, skip because messages are ordered newest first
-            if (!conversationMap[otherId]) {
-            conversationMap[otherId] = msg;
-            }
-
-            // Count unread messages (only those sent *to* current user)
-            if (msg.receiver_id === userId && !msg.is_read) {
-              unreadCountMap[otherId] = (unreadCountMap[otherId] || 0) + 1;
-            }
+      for (const msg of messages) {
+        const otherId = msg.sender_id === userId ? msg.receiver_id : msg.sender_id;
+        if (!conversationMap[otherId]) {
+          conversationMap[otherId] = msg;
         }
 
-        // Convert to array and map to contact structure
-        const conversations = Object.values(conversationMap).map((msg: any) => {
+        if (msg.receiver_id === userId && !msg.is_read) {
+          unreadCountMap[otherId] = (unreadCountMap[otherId] || 0) + 1;
+        }
+      }
+
+      const conversations = Object.values(conversationMap).map((msg: any) => {
         const isSender = msg.sender_id === userId;
         const otherId = isSender ? msg.receiver_id : msg.sender_id;
 
-        // Determine which user info to use based on who you are
-        const otherUserInfo = isSender
-          ? msg.receiver  // when you are the sender, use receiver info
-          : msg.sender;   // when you are the receiver, use sender info
+        const otherUserInfo = isSender ? msg.receiver : msg.sender;
 
         return {
           id: otherId,
@@ -219,128 +214,125 @@ const MessagingUI: React.FC = () => {
         };
       });
 
+      conversations.sort((a: any, b: any) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime());
 
-        // Sort by created_at descending (newest first)
-        conversations.sort((a: any, b: any) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime());
+      setContacts(conversations);
+    } catch (err) {
+      console.error('Unexpected error fetching conversations:', err);
+    }
+  };
 
-        setContacts(conversations);
-        } catch (err) {
-        console.error('Unexpected error fetching conversations:', err);
-        }
-    };
-    const fetchMessagesForContact = async (contact: Contact) => {
-        const userId = window.getGlobal ? window.getGlobal('userid') : null;
-        if (!userId) return;
+  const fetchMessagesForContact = async (contact: Contact) => {
+    const userId = window.getGlobal ? window.getGlobal('userid') : null;
+    if (!userId) return;
 
-        const { data, error } = await supabase
-            .from('messages')
-            .select(`
+    const { data, error } = await supabase
+      .from('messages')
+      .select(
+        `
             id,
             sender_id,
             receiver_id,
             content,
             created_at,
             is_read
-            `)
-            .or(`and(sender_id.eq.${userId},receiver_id.eq.${contact.id}),and(sender_id.eq.${contact.id},receiver_id.eq.${userId})`)
-            .order('created_at', { ascending: true });
+            `
+      )
+      .or(
+        `and(sender_id.eq.${userId},receiver_id.eq.${contact.id}),and(sender_id.eq.${contact.id},receiver_id.eq.${userId})`
+      )
+      .order('created_at', { ascending: true });
 
-        if (error) {
-            console.error('Error fetching messages for contact:', error.message);
-            return;
-        }
-        // if (data) {
-            const formatted = data.map((msg: any) => ({
-            id: msg.id,
-            text: msg.content,
-            sender: msg.sender_id === userId ? 'user' : 'other',
-            timestamp: new Date(msg.created_at),
-            isRead: msg.is_read,
-        }));
-        // }
-        
+    if (error) {
+      console.error('Error fetching messages for contact:', error.message);
+      return;
+    }
 
-        setMessages(formatted);
+    const formatted = data.map((msg: any) => ({
+      id: msg.id,
+      text: msg.content,
+      sender: msg.sender_id === userId ? 'user' : 'other',
+      timestamp: new Date(msg.created_at),
+      isRead: msg.is_read,
+    }));
 
-        const unreadIds = data
-          .filter((m: any) => m.receiver_id === userId && !m.is_read)
-          .map((m: any) => m.id);
+    setMessages(formatted);
 
-        if (unreadIds.length > 0) {
-          await supabase
-            .from('messages')
-            .update({ 
-                is_read: true, 
-                read_at: new Date().toISOString()
-              })
-            .in('id', unreadIds);
-        }
+    const unreadIds = data.filter((m: any) => m.receiver_id === userId && !m.is_read).map((m: any) => m.id);
 
-        setContacts(prev =>
-          prev.map(c =>
-            c.id === contact.id ? { ...c, unread: 0 } : c
-          )
-        );
-        };
+    if (unreadIds.length > 0) {
+      await supabase
+        .from('messages')
+        .update({
+          is_read: true,
+          read_at: new Date().toISOString(),
+        })
+        .in('id', unreadIds);
+    }
 
+    setContacts((prev) => prev.map((c) => (c.id === contact.id ? { ...c, unread: 0 } : c)));
+  };
 
+  useEffect(() => {
+    if (!selectedContact) return;
 
-useEffect(() => {
-  if (!selectedContact) return;
+    const interval = setInterval(() => {
+      (async () => {
+        await fetchMessagesForContact(selectedContact);
+      })();
+    }, 1000);
 
-  const interval = setInterval(() => {
-    (async () => {
-      // optional: you probably don't want to set it again
-      // setSelectedContact(selectedContact);
-      await fetchMessagesForContact(selectedContact);
-    })();
-  }, 1000); // runs every 1 second
+    return () => clearInterval(interval);
+  }, [selectedContact]);
 
-  return () => clearInterval(interval); // cleanup on unmount
-}, [selectedContact]);
+  useEffect(() => {
+    const interval = setInterval(() => {
+      (async () => {
+        await fetchConversations();
+      })();
+    }, 1000);
 
+    return () => clearInterval(interval);
+  }, []);
 
-useEffect(() => {
-  const interval = setInterval(() => {
-    (async () => {
-      await fetchConversations();
-    })();
-  }, 1000); // refresh every 2 seconds (you can adjust to 3000 or 5000 if needed)
-
-  return () => clearInterval(interval); // cleanup
-}, []);
-
-
-
+  // ✅ Handle back button on mobile
+  const handleBackToContacts = () => {
+    setSelectedContact(null);
+  };
 
   return (
-    <div className="flex flex-col flex-1 bg-gray-800 relative rounded-2xl overflow-hidden shadow-lg mb-4 mx-4">
-      {/* Layout inside the card: left column (sidebar) and right column (chat) */}
-      <div className="flex flex-1 min-h-0">
-        {/* Sidebar */}
-        <div className="w-80 bg-gray-800 border-r flex flex-col">
-          <div className="p-4 border-b ">
-            <div className="flex items-center justify-between mb-4">
-              <h1 className="text-2xl font-bold text-[#f5f5f5]">Messages</h1>
+    <div className="flex flex-col w-full bg-gray-800 rounded-xl overflow-hidden max-h-full h-full">
+      {/* Layout: sidebar and chat side by side on desktop, stacked on mobile */}
+      <div className="flex flex-1 overflow-hidden min-h-0">
+        {/* Sidebar - Shows on mobile when no contact selected, always shows on desktop */}
+        <div
+          className={`
+            ${isMobile() && selectedContact ? 'hidden' : 'flex'} 
+            md:flex w-full md:w-80 bg-gray-800 md:border-r border-gray-700 flex-col overflow-hidden
+          `}
+        >
+          <div className="p-3 md:p-4 border-b">
+            <div className="flex items-center justify-between mb-3 md:mb-4">
+              <h1 className="text-xl md:text-2xl font-bold text-[#f5f5f5]">Messages</h1>
               <div className="flex gap-2">
                 <button
                   onClick={() => setShowNewMessageModal(true)}
-                  className="p-2 bg-blue-500 hover:bg-blue-600 rounded-full text-white transition-colors"
+                  className="p-1.5 md:p-2 bg-blue-500 hover:bg-blue-600 rounded-full text-white transition-colors"
                   title="New Message"
                 >
-                  <Edit size={20} />
+                  <Edit size={18} className="md:w-5 md:h-5" />
                 </button>
-                <button className="p-2 hover:bg-gray-100 rounded-full">
-                  <MoreVertical size={20} className="text-[#f5f5f5]" />
+                <button className="p-1.5 md:p-2 hover:bg-gray-700 rounded-full">
+                  <MoreVertical size={18} className="text-[#f5f5f5] md:w-5 md:h-5" />
                 </button>
               </div>
             </div>
             <div className="relative">
-              <Search className="absolute left-3 top-2.5 text-gray-400" size={18} />
+              <Search className="absolute left-3 top-2.5 text-gray-400" size={16} />
               <input
                 type="text"
                 placeholder="Search conversations..."
-                className="w-full pl-10 pr-4 py-2 bg-gray-100 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                className="w-full pl-9 md:pl-10 pr-4 py-2 text-sm bg-gray-100 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
                 onChange={(e) => setSearchQuery(e.target.value)}
                 value={searchQuery}
               />
@@ -353,21 +345,21 @@ useEffect(() => {
               contacts.map((contact) => (
                 <div
                   key={contact.id}
-                   onClick={async () => {
+                  onClick={async () => {
                     setSelectedContact(contact);
-                    await fetchMessagesForContact(contact); // await fetching messages
+                    await fetchMessagesForContact(contact);
                   }}
-                  className={`p-4 flex items-center gap-3 cursor-pointer hover:bg-gray-700 ${
+                  className={`p-3 md:p-4 flex items-center gap-3 cursor-pointer hover:bg-gray-700 ${
                     selectedContact?.id === contact.id ? 'bg-blue-800' : ''
                   }`}
                 >
                   <div className="relative">
-                    <div className="w-12 h-12 rounded-full bg-gradient-to-br from-blue-400 to-purple-500 flex items-center justify-center text-white font-semibold">
+                    <div className="w-10 h-10 md:w-12 md:h-12 rounded-full bg-gradient-to-br from-blue-400 to-purple-500 flex items-center justify-center text-white font-semibold text-sm">
                       {getInitials(contact.name)}
                     </div>
                   </div>
                   <div className="flex-1 min-w-0">
-                    <h3 className="font-semibold text-[#f5f5f5] truncate flex items-center justify-between">
+                    <h3 className="font-semibold text-sm md:text-base text-[#f5f5f5] truncate flex items-center justify-between">
                       <span>{contact.name}</span>
                       {contact.unread > 0 && (
                         <span className="ml-2 bg-red-500 text-white text-xs font-bold px-2 py-0.5 rounded-full">
@@ -376,53 +368,67 @@ useEffect(() => {
                       )}
                     </h3>
                     {contact.lastMessage && (
-                      <p className="text-sm text-[#ababab] truncate">{contact.lastMessage}</p>
+                      <p className="text-xs md:text-sm text-[#ababab] truncate">{contact.lastMessage}</p>
                     )}
                   </div>
                 </div>
               ))
             ) : (
-              <div className="text-center text-gray-400 py-8">No conversations yet</div>
+              <div className="text-center text-gray-400 py-8 text-sm">No conversations yet</div>
             )}
           </div>
         </div>
 
-        {/* Main Chat Area */}
-        <div className="flex-1 flex flex-col min-h-0">
+        {/* Main Chat Area - Shows when contact selected on mobile, always shows on desktop */}
+        <div
+          className={`
+            ${isMobile() && !selectedContact ? 'hidden' : 'flex'}
+            md:flex flex-1 flex-col bg-gray-700 overflow-hidden h-full
+          `}
+        >
           {selectedContact ? (
             <>
               {/* Chat Header */}
-              <div className="bg-gray-700 border-b p-4 flex items-center justify-between">
-                <div className="flex items-center gap-3">
-                  <div className="relative">
-                    <div className="w-10 h-10 rounded-full bg-gradient-to-br from-blue-400 to-purple-500 flex items-center justify-center text-white font-semibold">
+              <div className="bg-gray-700 border-b border-gray-600 p-3 md:p-4 flex items-center justify-between flex-shrink-0">
+                <div className="flex items-center gap-2 md:gap-3 min-w-0 flex-1">
+                  {/* ✅ NEW: Back button on mobile */}
+                  <button
+                    onClick={handleBackToContacts}
+                    className="md:hidden p-1.5 hover:bg-gray-600 rounded-full flex-shrink-0"
+                  >
+                    <ArrowLeft size={20} className="text-[#f5f5f5]" />
+                  </button>
+                  <div className="relative flex-shrink-0">
+                    <div className="w-8 h-8 md:w-10 md:h-10 rounded-full bg-gradient-to-br from-blue-400 to-purple-500 flex items-center justify-center text-white font-semibold text-sm">
                       {getInitials(selectedContact.name)}
                     </div>
                   </div>
-                  <div>
-                    <h2 className="font-semibold text-[#f5f5f5]">{selectedContact.name}</h2>
-                    <p className="text-sm text-green-500">Online</p>
+                  <div className="min-w-0 flex-1">
+                    <h2 className="font-semibold text-sm md:text-base text-[#f5f5f5] truncate">
+                      {selectedContact.name}
+                    </h2>
+                    <p className="text-xs md:text-sm text-green-500">Online</p>
                   </div>
                 </div>
               </div>
 
               {/* Messages Area */}
-              <div className="no-scrollbar flex-1 overflow-y-auto p-4 space-y-4 bg-gray-700 min-h-0">
+              <div className="no-scrollbar flex-1 overflow-y-auto p-3 md:p-4 space-y-3 md:space-y-4 bg-gray-700 min-h-0">
                 {messages.map((message) => (
                   <div
                     key={message.id}
                     className={`flex ${message.sender === 'user' ? 'justify-end' : 'justify-start'}`}
                   >
                     <div
-                      className={`max-w-xs lg:max-w-md px-4 py-2 rounded-2xl ${
+                      className={`max-w-[85%] md:max-w-xs lg:max-w-md px-3 md:px-4 py-2 rounded-2xl ${
                         message.sender === 'user'
                           ? 'bg-blue-500 text-[#f5f5f5] rounded-br-none'
                           : 'bg-gray-300 text-gray-800 rounded-bl-none'
                       }`}
                     >
-                      <p className="break-words">{message.text}</p>
+                      <p className="break-words text-sm md:text-base">{message.text}</p>
                       <span
-                        className={`text-xs mt-1 block ${
+                        className={`text-[10px] md:text-xs mt-1 block ${
                           message.sender === 'user' ? 'text-blue-100' : 'text-gray-500'
                         }`}
                       >
@@ -435,10 +441,10 @@ useEffect(() => {
               </div>
 
               {/* Input Area */}
-              <div className="bg-gray-700 border-t border-gray-200 p-4">
-                <div className="flex items-end gap-2">
-                  <button className="p-2 hover:bg-gray-100 rounded-full">
-                    <Paperclip size={20} className="text-[#f5f5f5]" />
+              <div className="bg-gray-700 border-t border-gray-600 p-2 md:p-4 flex-shrink-0">
+                <div className="flex items-end gap-1 md:gap-2">
+                  <button className="p-1.5 md:p-2 hover:bg-gray-600 rounded-full flex-shrink-0">
+                    <Paperclip size={18} className="text-[#f5f5f5] md:w-5 md:h-5" />
                   </button>
                   <div className="flex-1 relative">
                     <textarea
@@ -446,25 +452,25 @@ useEffect(() => {
                       onChange={(e) => setInputText(e.target.value)}
                       onKeyPress={handleKeyPress}
                       placeholder="Type a message..."
-                      className="w-full px-4 py-3 pr-12 rounded-lg text-black bg-gray-100 focus:outline-none focus:ring-2 focus:ring-blue-500 resize-none"
+                      className="w-full px-3 md:px-4 py-2 md:py-3 pr-10 md:pr-12 rounded-lg text-sm md:text-base text-black bg-gray-100 focus:outline-none focus:ring-2 focus:ring-blue-500 resize-none"
                       rows={1}
                       style={{ maxHeight: '120px' }}
                     />
-                    <button className="absolute right-3 bottom-3 p-1 hover:bg-gray-200 rounded-full">
-                      <Smile size={20} className="text-gray-600" />
+                    <button className="absolute right-2 md:right-3 bottom-2 md:bottom-3 p-1 hover:bg-gray-200 rounded-full">
+                      <Smile size={18} className="text-gray-600 md:w-5 md:h-5" />
                     </button>
                   </div>
                   <button
                     onClick={handleSendMessage}
-                    className="p-3 bg-blue-500 hover:bg-blue-600 rounded-full text-white transition-colors"
+                    className="p-2 md:p-3 bg-blue-500 hover:bg-blue-600 rounded-full text-white transition-colors flex-shrink-0"
                   >
-                    <Send size={20} />
+                    <Send size={18} className="md:w-5 md:h-5" />
                   </button>
                 </div>
               </div>
             </>
           ) : (
-            <div className="flex-1 flex items-center justify-center text-gray-400">
+            <div className="flex-1 flex items-center justify-center text-gray-400 text-sm md:text-base p-4 text-center">
               Select a contact to start chatting
             </div>
           )}
@@ -473,10 +479,10 @@ useEffect(() => {
 
       {/* New Message Modal */}
       {showNewMessageModal && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-          <div className="bg-white rounded-lg shadow-xl w-full max-w-md mx-4">
-            <div className="flex items-center justify-between p-4 border-b border-gray-200">
-              <h2 className="text-xl font-semibold text-gray-800">New Message</h2>
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-lg shadow-xl w-full max-w-md">
+            <div className="flex items-center justify-between p-3 md:p-4 border-b border-gray-200">
+              <h2 className="text-lg md:text-xl font-semibold text-gray-800">New Message</h2>
               <button
                 onClick={() => {
                   setShowNewMessageModal(false);
@@ -484,47 +490,45 @@ useEffect(() => {
                 }}
                 className="p-1 hover:bg-gray-100 rounded-full"
               >
-                <X size={24} className="text-gray-600" />
+                <X size={20} className="text-gray-600 md:w-6 md:h-6" />
               </button>
             </div>
 
-            <div className="p-4 border-b border-gray-200">
+            <div className="p-3 md:p-4 border-b border-gray-200">
               <div className="relative">
-                <Search className="absolute left-3 top-2.5 text-gray-400" size={18} />
+                <Search className="absolute left-3 top-2.5 text-gray-400" size={16} />
                 <input
                   type="text"
                   placeholder="Search contacts..."
                   value={searchQuery}
                   onChange={(e) => setSearchQuery(e.target.value)}
-                  className="w-full pl-10 pr-4 py-2 bg-gray-100 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  className="w-full pl-9 md:pl-10 pr-4 py-2 text-sm bg-gray-100 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
                   autoFocus
                 />
               </div>
             </div>
 
-            <div className="max-h-96 overflow-y-auto">
+            <div className="max-h-[60vh] md:max-h-96 overflow-y-auto">
               {filteredContacts.length > 0 ? (
                 filteredContacts.map((contact) => (
                   <div
                     key={contact.id}
                     onClick={() => handleStartNewChat(contact)}
-                    className="p-4 flex items-center gap-3 cursor-pointer hover:bg-gray-50"
+                    className="p-3 md:p-4 flex items-center gap-3 cursor-pointer hover:bg-gray-50"
                   >
-                    <div className="relative">
-                      <div className="w-12 h-12 rounded-full bg-gradient-to-br from-blue-400 to-purple-500 flex items-center justify-center text-white font-semibold">
+                    <div className="relative flex-shrink-0">
+                      <div className="w-10 h-10 md:w-12 md:h-12 rounded-full bg-gradient-to-br from-blue-400 to-purple-500 flex items-center justify-center text-white font-semibold text-sm">
                         {getInitials(contact.name)}
                       </div>
                     </div>
-                    <div className="flex-1">
-                      <h3 className="font-semibold text-gray-900">{contact.name}</h3>
-                      <p className="text-sm text-gray-500">
-                        {contact.email || ''}
-                      </p>
+                    <div className="flex-1 min-w-0">
+                      <h3 className="font-semibold text-sm md:text-base text-gray-900 truncate">{contact.name}</h3>
+                      <p className="text-xs md:text-sm text-gray-500 truncate">{contact.email || ''}</p>
                     </div>
                   </div>
                 ))
               ) : (
-                <div className="p-8 text-center text-gray-500">No contacts found</div>
+                <div className="p-8 text-center text-gray-500 text-sm">No contacts found</div>
               )}
             </div>
           </div>
