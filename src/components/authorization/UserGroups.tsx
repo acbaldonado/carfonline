@@ -195,7 +195,7 @@ export default function UserGroups() {
                 </div>
               ) : (
                 filteredSchemas.map((schema) => (
-                  <Card key={schema.id} className="bg-card border-border">
+                  <Card key={schema.id} className="bg-card border-border" onClick={() => handleEdit(schema)}>
                     <CardContent className="p-4">
                       <div className="flex justify-between items-start mb-3">
                         <div>

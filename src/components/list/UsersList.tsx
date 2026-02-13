@@ -237,7 +237,7 @@ export default function UsersList() {
                 </div>
               ) : (
                 filteredUsers.map((user) => (
-                  <Card key={user.userid} className="bg-card border-border">
+                  <Card key={user.userid} className="bg-card border-border" onClick={() => handleEdit(user)}>
                     <CardContent className="p-4">
                       <div className="flex justify-between items-start mb-3">
                         <div className="text-primary font-semibold text-sm">

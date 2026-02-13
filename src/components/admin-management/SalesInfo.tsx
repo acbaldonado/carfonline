@@ -393,7 +393,7 @@ const SalesInfo: React.FC = () => {
                 </div>
               ) : (
                 filteredItems.map((item, index) => (
-                  <Card key={index} className="bg-card border-border">
+                  <Card key={index} className="bg-card border-border" onDoubleClick={() => handleDoubleClick(index, item)}>
                     <CardContent className="p-3">
                       <div className="flex items-center justify-between gap-3">
                         {editingIndex === index ? (

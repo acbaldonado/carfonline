@@ -219,7 +219,7 @@ export default function SchemaList() {
                 </div>
               ) : (
                 filteredSchemas.map((schema) => (
-                  <Card key={schema.itemid} className="bg-card border-border">
+                  <Card key={schema.itemid} className="bg-card border-border" onClick={() => handleEdit(schema)}>
                     <CardContent className="p-4">
                       <div className="flex justify-between items-start mb-3">
                         <div>

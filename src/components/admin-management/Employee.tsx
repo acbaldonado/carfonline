@@ -169,7 +169,7 @@ const EmployeeDirectory: React.FC = () => {
       ) : (
         <div className="space-y-2">
           {data.map((item, index) => (
-            <Card key={index} className="bg-card border-border">
+            <Card key={index} className="bg-card border-border" onClick={() => openEditDialog(item, title, index)}>
               <CardContent className="p-4">
                 <div className="flex justify-between items-start">
                   <div className="flex items-center gap-3 flex-1">
