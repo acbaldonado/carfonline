@@ -516,7 +516,7 @@ export default function UdfMaintenance() {
 
           {selectedTable ? (
             <div className="flex-1 mx-4 mb-4 overflow-hidden flex flex-col">
-              <div className="no-scrollbar bg-gray-900 rounded-lg shadow-sm relative overflow-y-auto max-h-[500px]">
+              <div className="custom-scrollbar bg-gray-900 rounded-lg shadow-sm relative overflow-y-auto" style={{ maxHeight: 'calc(100vh - 280px)' }}>
                 <table className="w-full table-fixed border-collapse">
                   <thead>
                     <tr className="bg-gray-900 border-b border-gray-200">

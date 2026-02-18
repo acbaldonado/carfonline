@@ -363,8 +363,8 @@ export default function UsersList() {
 
           {/* Table Container - Scrollable */}
           <div className="flex flex-col bg-gray-800 mx-4 mb-4 mt-4 rounded-lg shadow overflow-hidden flex-1">
-            <div className="flex-1 overflow-y-auto">
-              <table className="w-full table-auto">
+            <div className="flex-1 overflow-y-auto custom-scrollbar">
+              <table className="w-full table-auto ">
                 <thead className="bg-gray-900 sticky top-0 z-10">
                   <tr>
                     <th className="text-left px-6 py-4 text-sm font-semibold text-gray-300 w-32">User ID</th>

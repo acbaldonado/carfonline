@@ -66,25 +66,22 @@ export default function GroupAuthorization() {
   const fetchData = async () => {
     try {
       setLoading(true);
-      
-      // Fetch user groups
+
       const { data: groupsData, error: groupsError } = await supabase
         .from('usergroups')
         .select('*')
         .order('groupcode', { ascending: true });
-      
+
       if (groupsError) throw groupsError;
       setUserGroups(groupsData || []);
 
-      // Fetch schemas
       const { data: schemasData, error: schemasError } = await supabase
         .from('schemas')
         .select('*')
         .order('itemid', { ascending: true });
-      
+
       if (schemasError) throw schemasError;
       setSchemas(schemasData || []);
-
     } catch (error) {
       toast({
         title: 'Error',
@@ -102,7 +99,7 @@ export default function GroupAuthorization() {
         .from('groupauthorizations')
         .select('*')
         .eq('groupcode', selectedGroup);
-      
+
       if (error) throw error;
       setAuthorizations(data || []);
     } catch (error) {
@@ -112,7 +109,7 @@ export default function GroupAuthorization() {
 
   const getAccessLevel = (menucmd: string): 'FULL' | 'NONE' => {
     const auth = authorizations.find(a => a.menucmd === menucmd);
-    return auth?.accesslevel || 'NONE';
+    return (auth?.accesslevel as 'FULL' | 'NONE') || 'NONE';
   };
 
   const handleAccessChange = async (menucmd: string, accessLevel: 'FULL' | 'NONE') => {
@@ -128,18 +125,33 @@ export default function GroupAuthorization() {
     try {
       const schemaItem = schemas.find(s => s.menucmd === menucmd);
       const affectedMenuCmds: string[] = [menucmd];
-      
+
       if (schemaItem && schemaItem.menutype === 'M') {
+        // Cascade DOWN to submenus and their programs
         const subMenus = schemas.filter(s => s.menutype === 'M' && s.menuid === menucmd);
         affectedMenuCmds.push(...subMenus.map(sm => sm.menucmd));
-        
+
         const programs = schemas.filter(s => s.menutype === 'P' && s.menuid === menucmd);
         affectedMenuCmds.push(...programs.map(p => p.menucmd));
-        
+
         subMenus.forEach(subMenu => {
           const subPrograms = schemas.filter(s => s.menutype === 'P' && s.menuid === subMenu.menucmd);
           affectedMenuCmds.push(...subPrograms.map(p => p.menucmd));
         });
+      }
+
+      // If setting to FULL, bubble UP to all ancestor menus
+      if (accessLevel === 'FULL') {
+        let currentMenuCmd = schemaItem?.menuid;
+        while (currentMenuCmd && currentMenuCmd !== '') {
+          const parentMenu = schemas.find(s => s.menucmd === currentMenuCmd);
+          if (parentMenu && !affectedMenuCmds.includes(parentMenu.menucmd)) {
+            affectedMenuCmds.push(parentMenu.menucmd);
+            currentMenuCmd = parentMenu.menuid ?? '';
+          } else {
+            break;
+          }
+        }
       }
 
       const updatePromises = affectedMenuCmds.map(async (cmd) => {
@@ -157,7 +169,7 @@ export default function GroupAuthorization() {
             .insert([{
               groupcode: selectedGroup,
               menucmd: cmd,
-              accesslevel: accessLevel
+              accesslevel: accessLevel,
             }])
             .select();
         }
@@ -197,18 +209,18 @@ export default function GroupAuthorization() {
   const getMenuHierarchy = () => {
     const menus = schemas.filter(s => s.menutype === 'M' && (!s.menuid || s.menuid === ''));
     const topLevelPrograms = schemas.filter(s => s.menutype === 'P' && (!s.menuid || s.menuid === ''));
-    
+
     return [
       ...menus.map(menu => ({
         ...menu,
         subMenus: schemas.filter(s => s.menutype === 'M' && s.menuid === menu.menucmd),
-        programs: schemas.filter(s => s.menutype === 'P' && s.menuid === menu.menucmd)
+        programs: schemas.filter(s => s.menutype === 'P' && s.menuid === menu.menucmd),
       })),
       ...topLevelPrograms.map(program => ({
         ...program,
         subMenus: [],
-        programs: []
-      }))
+        programs: [],
+      })),
     ];
   };
 
@@ -216,10 +228,15 @@ export default function GroupAuthorization() {
     return programs.map(program => (
       <div
         key={program.itemid}
-        className={`flex items-center justify-between py-2 px-3 ${isMobile ? 'px-2' : 'px-4'} hover:bg-gray-700/50 transition-colors`}
-        style={{ paddingLeft: isMobile ? `${(level + 2) * 1}rem` : `${(level + 2) * 1.5}rem` }}
+        className="flex items-center justify-between py-2 hover:bg-gray-700/50 transition-colors"
+        style={{
+          paddingLeft: isMobile ? `${(level + 2) * 1}rem` : `${(level + 2) * 1.5}rem`,
+          paddingRight: '1rem',
+        }}
       >
-        <span className={`text-gray-200 ${isMobile ? 'text-xs' : 'text-sm'} flex-1 mr-2`}>{program.menuname}</span>
+        <span className={`text-gray-200 ${isMobile ? 'text-xs' : 'text-sm'} flex-1 mr-2`}>
+          {program.menuname}
+        </span>
         <select
           value={getAccessLevel(program.menucmd)}
           onChange={(e) => handleAccessChange(program.menucmd, e.target.value as 'FULL' | 'NONE')}
@@ -241,13 +258,18 @@ export default function GroupAuthorization() {
       return (
         <div key={subMenu.itemid}>
           <div
-            className={`flex items-center justify-between py-2 px-3 ${isMobile ? 'px-2' : 'px-4'} hover:bg-gray-700/50 transition-colors cursor-pointer`}
-            style={{ paddingLeft: isMobile ? `${(level + 1) * 1}rem` : `${(level + 1) * 1.5}rem` }}
+            className="flex items-center justify-between py-2 hover:bg-gray-700/50 transition-colors cursor-pointer"
+            style={{
+              paddingLeft: isMobile ? `${(level + 1) * 1}rem` : `${(level + 1) * 1.5}rem`,
+              paddingRight: '1rem',
+            }}
             onClick={() => toggleMenu(subMenu.menucmd)}
           >
             <div className="flex items-center gap-2 flex-1 mr-2">
               {isExpanded ? <ChevronDown size={isMobile ? 14 : 16} /> : <ChevronRight size={isMobile ? 14 : 16} />}
-              <span className={`text-gray-200 font-medium ${isMobile ? 'text-xs' : 'text-sm'}`}>{subMenu.menuname}</span>
+              <span className={`text-gray-200 font-medium ${isMobile ? 'text-xs' : 'text-sm'}`}>
+                {subMenu.menuname}
+              </span>
             </div>
             <select
               value={getAccessLevel(subMenu.menucmd)}
@@ -272,9 +294,7 @@ export default function GroupAuthorization() {
 
   const GroupSelectionPanel = () => (
     <div className={`${isMobile ? 'w-full' : 'w-80'} bg-gray-800 rounded-lg p-4 shadow`}>
-      <label className="block text-sm font-semibold text-gray-200 mb-2">
-        GROUPS
-      </label>
+      <label className="block text-sm font-semibold text-gray-200 mb-2">GROUPS</label>
       <select
         value={selectedGroup}
         onChange={(e) => setSelectedGroup(e.target.value)}
@@ -313,7 +333,7 @@ export default function GroupAuthorization() {
   return (
     <div className="h-full bg-background flex flex-col">
       {isMobile ? (
-        /* Mobile Layout */
+        /* ── MOBILE ── */
         <div className="fixed inset-x-0 top-0 bottom-0 flex flex-col" style={{ paddingTop: '60px' }}>
           {/* Mobile Header */}
           <div className="flex-shrink-0 bg-background border-b border-border">
@@ -327,8 +347,7 @@ export default function GroupAuthorization() {
                 {showGroupPanel ? 'Close' : 'Select Group'}
               </button>
             </div>
-            
-            {/* Selected Group Badge */}
+
             {selectedGroup && !showGroupPanel && (
               <div className="px-4 pb-3">
                 <div className="bg-blue-600/20 border border-blue-600/50 rounded-lg p-2">
@@ -344,12 +363,10 @@ export default function GroupAuthorization() {
           {/* Mobile Content */}
           <div className="flex-1 overflow-auto">
             {showGroupPanel ? (
-              /* Group Selection Panel */
               <div className="p-4">
                 <GroupSelectionPanel />
               </div>
             ) : (
-              /* Authorizations List */
               <div className="p-4">
                 {!selectedGroup ? (
                   <div className="text-center py-12 text-muted-foreground">
@@ -365,13 +382,11 @@ export default function GroupAuthorization() {
                   <div className="space-y-2">
                     {hierarchy.map(item => {
                       const isExpanded = expandedMenus.has(item.menucmd);
-                      const isMenu = item.menutype === 'M';
                       const hasChildren = item.subMenus.length > 0 || item.programs.length > 0;
-                      
+
                       return (
                         <Card key={item.itemid} className="bg-gray-800 border-gray-700">
                           <CardContent className="p-3">
-                            {/* Main Menu or Program */}
                             <div
                               className="flex items-center justify-between"
                               style={{ cursor: hasChildren ? 'pointer' : 'default' }}
@@ -397,7 +412,6 @@ export default function GroupAuthorization() {
                               </select>
                             </div>
 
-                            {/* Expanded Content */}
                             {isExpanded && hasChildren && (
                               <div className="mt-2 pt-2 border-t border-gray-700">
                                 {item.subMenus.length > 0 && renderSubMenus(item.subMenus, item.menucmd)}
@@ -415,19 +429,17 @@ export default function GroupAuthorization() {
           </div>
         </div>
       ) : (
-        /* Desktop Layout */
+        /* ── DESKTOP ── */
         <>
-          {/* Header */}
           <div className="px-4 py-4 bg-background border-b border-gray-700">
             <h2 className="text-xl font-semibold text-foreground">GROUP AUTHORIZATION</h2>
           </div>
 
-          {/* Main Content */}
           <div className="flex-1 flex gap-4 p-4 overflow-hidden">
-            {/* Left Panel - Group Selection */}
+            {/* Left Panel */}
             <GroupSelectionPanel />
 
-            {/* Right Panel - Module and Programs */}
+            {/* Right Panel */}
             <div className="flex-1 bg-gray-800 rounded-lg shadow overflow-hidden flex flex-col">
               <div className="bg-gray-900 px-4 py-3 border-b border-gray-700">
                 <div className="flex justify-between items-center">
@@ -435,7 +447,7 @@ export default function GroupAuthorization() {
                   <span className="text-sm font-semibold text-gray-200">ACCESS LEVEL</span>
                 </div>
               </div>
-              
+
               <div className="flex-1 overflow-auto">
                 {!selectedGroup ? (
                   <div className="flex items-center justify-center h-full text-gray-500">
@@ -445,9 +457,8 @@ export default function GroupAuthorization() {
                   <div className="divide-y divide-gray-700">
                     {hierarchy.map(item => {
                       const isExpanded = expandedMenus.has(item.menucmd);
-                      const isMenu = item.menutype === 'M';
                       const hasChildren = item.subMenus.length > 0 || item.programs.length > 0;
-                      
+
                       return (
                         <div key={item.itemid}>
                           {/* Main Menu or Top-Level Program */}
@@ -458,7 +469,10 @@ export default function GroupAuthorization() {
                           >
                             <div className="flex items-center gap-2">
                               {hasChildren && (isExpanded ? <ChevronDown size={18} /> : <ChevronRight size={18} />)}
-                              <span className="text-gray-100 font-semibold" style={{ marginLeft: hasChildren ? '0' : '26px' }}>
+                              <span
+                                className="text-gray-100 font-semibold"
+                                style={{ marginLeft: hasChildren ? '0' : '26px' }}
+                              >
                                 {item.menuname}
                               </span>
                             </div>

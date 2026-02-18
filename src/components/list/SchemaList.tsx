@@ -340,8 +340,8 @@ export default function SchemaList() {
           </div>
 
           <div className="flex-1 mx-4 mb-4 mt-4 overflow-hidden flex flex-col">
-            <div className="flex-1 overflow-auto bg-gray-800 rounded-lg shadow">
-              <table className="min-w-full table-auto">
+            <div className="flex-1 overflow-auto bg-gray-800 rounded-lg shadow custom-scrollbar">
+              <table className="min-w-full table-auto ">
                 <thead className="bg-gray-900 sticky top-0 z-10">
                   <tr>
                     <th className="text-left px-6 py-4 text-sm font-semibold text-gray-200 whitespace-nowrap">MENU ID</th>

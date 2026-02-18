@@ -435,7 +435,7 @@ const PendingCustomerList: React.FC<CustomerListProps>  = ({onEditCustomer }) =>
             {/* Table */}
             <Card className="bg-card border-border overflow-hidden shadow-sm">
               <CardContent className="p-0">
-                <div className="w-full overflow-x-auto no-scrollbar" style={{ maxHeight: 'calc(100vh - 300px)' }}>
+                <div className="w-full overflow-x-auto custom-scrollbar" style={{ maxHeight: 'calc(100vh - 300px)' }}>
                   <table className="min-w-max w-full border-collapse">
                     <thead className="sticky top-0 z-10">
                       <tr className="border-b bg-muted">
