@@ -62,6 +62,8 @@ export interface CustomerFormData {
   secondapproverdate: string;
   finalapprovername: string;
   thirdapproverdate: string;
+  opscode:string;
+  opsname:string;
 }
 
 interface TermOption {
@@ -575,47 +577,58 @@ export const useCustomerForm = (
 
   // ==================== FETCH EMPLOYEES ====================
   useEffect(() => {
-    const fetchEmployees = async () => {
-      const { data, error } = await supabase
-        .from('employees')
-        .select('employeeno, employeename, employeetype');
+  const fetchEmployees = async () => {
+    const { data, error } = await supabase
+      .from('employees')
+      .select('employeeno, employeename, employeetype');
 
-      if (error) {
-        console.error(error);
-        return;
-      }
+    if (error) {
+      console.error(error);
+      return;
+    }
 
-      const grouped: {
-        GM: EmployeeOption[];
-        AM: EmployeeOption[];
-        SS: EmployeeOption[];
-      } = { GM: [], AM: [], SS: [] };
+    const grouped: {
+      GM: EmployeeOption[];
+      AM: EmployeeOption[];
+      SS: EmployeeOption[];
+      OPS: EmployeeOption[];
+    } = { GM: [], AM: [], SS: [], OPS: [] };
 
-      data.forEach((emp) => {
-        const type = emp.employeetype?.toUpperCase();
-        if (!['GM', 'AM', 'SS'].includes(type)) return;
-        grouped[type as 'GM' | 'AM' | 'SS'].push({
-          employeeno: emp.employeeno,
-          employeename: emp.employeename,
-        });
+    data.forEach((emp) => {
+      const type = emp.employeetype?.toUpperCase();
+      if (!['GM', 'AM', 'SS', 'OPS'].includes(type)) return;
+
+      grouped[type as 'GM' | 'AM' | 'SS' | 'OPS'].push({
+        employeeno: emp.employeeno,
+        employeename: emp.employeename,
       });
+    });
 
-      (Object.keys(grouped) as Array<keyof typeof grouped>).forEach((key) => {
-        const noLabel =
-          key === 'GM' ? 'NO EXECUTIVE' : key === 'AM' ? 'NO GM/SAM/AM' : 'NO SAO/SUPERVISOR';
-        grouped[key].sort((a, b) => {
-          const aName = a.employeename.toUpperCase();
-          const bName = b.employeename.toUpperCase();
-          if (aName === noLabel) return -1;
-          if (bName === noLabel) return 1;
-          return aName.localeCompare(bName);
-        });
+    (Object.keys(grouped) as Array<keyof typeof grouped>).forEach((key) => {
+      const noLabel =
+        key === 'OPS'
+          ? 'NO OPS LEAD/ FIELD OFFICER:'
+          : key === 'AM'
+          ? 'NO GM/SAM/AM'
+          : 'NO SAO/SUPERVISOR';
+
+      grouped[key].sort((a, b) => {
+        const aName = a.employeename.toUpperCase();
+        const bName = b.employeename.toUpperCase();
+
+        if (aName === noLabel) return -1;
+        if (bName === noLabel) return 1;
+
+        return aName.localeCompare(bName);
       });
+    });
 
-      setEmployeeOptions(grouped);
-    };
-    fetchEmployees();
-  }, []);
+    setEmployeeOptions(grouped);
+  };
+
+  fetchEmployees();
+}, []);
+
 
   // ==================== FETCH SALES TERRITORY ====================
   useEffect(() => {
@@ -1142,6 +1155,8 @@ export const useCustomerForm = (
         saoname: formData.saoname,
         supcode: formData.supcode,
         supname: formData.supname,
+        opscode: formData.opscode,
+        opsname: formData.opsname,
         custtype: formData.custtype,
         lastname: formData.lastname,
         firstname: formData.firstname,
@@ -1257,6 +1272,8 @@ export const useCustomerForm = (
         saoname: formData.saoname,
         supcode: formData.supcode,
         supname: formData.supname,
+        opscode: formData.opscode,
+        opsname: formData.opsname,
         custtype: formData.custtype,
         lastname: formData.lastname,
         firstname: formData.firstname,
@@ -1370,6 +1387,9 @@ export const useCustomerForm = (
       saocode: formData.saocode,
       saoname: formData.saoname,
       supcode: formData.supcode,
+      supname: formData.supname,
+      opscode: formData.opscode,
+      opsname: formData.opsname,
       custtype: formData.custtype,
       approvestatus: formData.approvestatus,
       type: formData.type,

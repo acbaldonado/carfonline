@@ -1428,19 +1428,25 @@ const CustomerForm: React.FC<CustomerFormProps> = ({
                 type: 'GM',
               },
               {
-                label: 'GM/SAM/AM:',
+                label: 'GM:',
                 codeField: 'saocode',
                 nameField: 'saoname',
                 type: 'AM',
               },
               {
-                label: 'SAO/SUPERVISOR:',
+                label: 'AM/SAO (WMS PRICE):',
                 codeField: 'supcode',
                 nameField: 'supname',
                 type: 'SS',
               },
+              {
+                label: 'OPS LEAD/ FIELD OFFICER:',
+                codeField: 'opscode',
+                nameField: 'opsname',
+                type: 'OPS',
+              },
             ].map((row) => {
-              const list = employeeOptions[row.type as 'GM' | 'AM' | 'SS'] ?? [];
+              const list = employeeOptions[row.type as 'GM' | 'AM' | 'SS'| 'OPS'] ?? [];
 
               return (
                 <div key={row.label}>
@@ -1466,11 +1472,12 @@ const CustomerForm: React.FC<CustomerFormProps> = ({
                         }`}
                     >
                       <option value="">Select</option>
-                      {list.map((emp) => (
-                        <option key={emp.employeeno} value={emp.employeeno}>
+                      {list.map((emp, i) => (
+                        <option key={`${emp.employeetype}-${emp.employeeno}-${i}`} value={emp.employeeno}>
                           {emp.employeeno}
                         </option>
                       ))}
+
                     </select>
 
                     <select
@@ -1491,8 +1498,8 @@ const CustomerForm: React.FC<CustomerFormProps> = ({
                         }`}
                     >
                       <option value="">Select</option>
-                      {list.map((emp) => (
-                        <option key={emp.employeeno} value={emp.employeename}>
+                      {list.map((emp, i) => (
+                        <option key={`${emp.employeetype}-${emp.employeeno}-name-${i}`} value={emp.employeename}>
                           {emp.employeename}
                         </option>
                       ))}
@@ -1523,11 +1530,11 @@ const CustomerForm: React.FC<CustomerFormProps> = ({
                           }`}
                       >
                         <option value="">Select</option>
-                        {list.map((emp) => (
-                          <option key={emp.employeeno} value={emp.employeeno}>
-                            {emp.employeeno}
-                          </option>
-                        ))}
+                        {list.map((emp, i) => (
+                        <option key={`${emp.employeetype}-${emp.employeeno}-${i}`} value={emp.employeeno}>
+                          {emp.employeeno}
+                        </option>
+                      ))}
                       </select>
                     </div>
 
@@ -1551,11 +1558,11 @@ const CustomerForm: React.FC<CustomerFormProps> = ({
                           }`}
                       >
                         <option value="">Select</option>
-                        {list.map((emp) => (
-                          <option key={emp.employeeno} value={emp.employeename}>
-                            {emp.employeename}
-                          </option>
-                        ))}
+                        {list.map((emp, i) => (
+                        <option key={`${emp.employeetype}-${emp.employeeno}-name-${i}`} value={emp.employeename}>
+                          {emp.employeename}
+                        </option>
+                      ))}
                       </select>
                     </div>
                   </div>

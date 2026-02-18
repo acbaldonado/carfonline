@@ -174,7 +174,12 @@ const ApprovedCustomerList: React.FC<CustomerListProps>  = ({onEditCustomer }) =
           customer.maker === userid
         );
       }
-      setCustomers(filteredCustomers);
+      const sorted = [...filteredCustomers].sort((a, b) => {
+        const aId = parseInt(a['#'] || '0');
+        const bId = parseInt(b['#'] || '0');
+        return bId - aId;
+      });
+      setCustomers(sorted);
     } catch (error) {
       console.error("Error fetching Google Sheet:", error);
       toast({

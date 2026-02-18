@@ -5,7 +5,7 @@ import { Input } from "@/components/ui/input";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { Badge } from "@/components/ui/badge";
-import { User, Crown, PlusCircle, Edit2, Trash2 } from "lucide-react";
+import { User, Crown, PlusCircle, Edit2 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 
 interface Employee {
@@ -18,12 +18,13 @@ const EmployeeDirectory: React.FC = () => {
   const [executives, setExecutives] = useState<Employee[]>([]);
   const [managers, setManagers] = useState<Employee[]>([]);
   const [sao, setSao] = useState<Employee[]>([]);
+  const [opsLead, setOpsLead] = useState<Employee[]>([]);
   const [showDialog, setShowDialog] = useState(false);
   const [selectedemployeetype, setSelectedemployeetype] = useState("");
   const [formData, setFormData] = useState<Employee>({ employeeno: "", employeename: "", employeetype: "" });
   const [editedIndex, setEditedIndex] = useState(-1);
   const [isMobile, setIsMobile] = useState(false);
-  const [activeTab, setActiveTab] = useState<"Executives" | "Managers" | "SAO">("Executives");
+  const [activeTab, setActiveTab] = useState<"Executives" | "Managers" | "SAO" | "OPS LEAD">("Executives");
 
   useEffect(() => {
     const checkMobile = () => {
@@ -44,10 +45,10 @@ const EmployeeDirectory: React.FC = () => {
       console.error("Supabase fetch error:", error.message);
       return;
     }
-
     setExecutives(data.filter((e: Employee) => e.employeetype === "GM"));
     setManagers(data.filter((e: Employee) => e.employeetype === "AM"));
     setSao(data.filter((e: Employee) => e.employeetype === "SS"));
+    setOpsLead(data.filter((e: Employee) => e.employeetype === "OPS"));
   };
 
   const openDialogEmployee = (employeetype: string) => {
@@ -65,7 +66,11 @@ const EmployeeDirectory: React.FC = () => {
   };
 
   const saveEmployee = async () => {
-    const newEmp = { employeeno: formData.employeeno, employeename: formData.employeename, employeetype: formData.employeetype };
+    const newEmp = {
+      employeeno: formData.employeeno,
+      employeename: formData.employeename,
+      employeetype: formData.employeetype,
+    };
     const { error } = await supabase.from("employees").insert([newEmp]);
     if (error) {
       console.error("Insert failed:", error.message);
@@ -78,9 +83,12 @@ const EmployeeDirectory: React.FC = () => {
   const updateEmployee = async () => {
     const { error } = await supabase
       .from("employees")
-      .update({ employeeno: formData.employeeno, employeename: formData.employeename, employeetype: formData.employeetype })
+      .update({
+        employeeno: formData.employeeno,
+        employeename: formData.employeename,
+        employeetype: formData.employeetype,
+      })
       .eq("employeeno", formData.employeeno);
-
     if (error) {
       console.error("Update failed:", error.message);
       return;
@@ -91,7 +99,10 @@ const EmployeeDirectory: React.FC = () => {
 
   const deleteEmployee = async () => {
     if (confirm('Are you sure you want to delete this employee?')) {
-      const { error } = await supabase.from("employees").delete().eq("employeeno", formData.employeeno);
+      const { error } = await supabase
+        .from("employees")
+        .delete()
+        .eq("employeeno", formData.employeeno);
       if (error) {
         console.error("Delete failed:", error.message);
         return;
@@ -169,7 +180,11 @@ const EmployeeDirectory: React.FC = () => {
       ) : (
         <div className="space-y-2">
           {data.map((item, index) => (
-            <Card key={index} className="bg-card border-border" onClick={() => openEditDialog(item, title, index)}>
+            <Card
+              key={index}
+              className="bg-card border-border cursor-pointer"
+              onClick={() => openEditDialog(item, title, index)}
+            >
               <CardContent className="p-4">
                 <div className="flex justify-between items-start">
                   <div className="flex items-center gap-3 flex-1">
@@ -183,7 +198,10 @@ const EmployeeDirectory: React.FC = () => {
                   </div>
                   <div className="flex gap-2 flex-shrink-0">
                     <button
-                      onClick={() => openEditDialog(item, title, index)}
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        openEditDialog(item, title, index);
+                      }}
                       className="p-1.5 text-blue-500 hover:bg-blue-50 rounded transition-colors"
                     >
                       <Edit2 size={16} />
@@ -198,75 +216,68 @@ const EmployeeDirectory: React.FC = () => {
     </div>
   );
 
+  const tabs: { label: string; key: "Executives" | "Managers" | "SAO" | "OPS LEAD" }[] = [
+    { label: "Executives", key: "Executives" },
+    { label: "Managers", key: "Managers" },
+    { label: "SAO", key: "SAO" },
+    { label: "OPS LEAD", key: "OPS LEAD" },
+  ];
+
   return (
     <div className="h-full bg-background flex flex-col">
       {isMobile ? (
-        /* Mobile Layout */
+        /* ── MOBILE ── */
         <>
           <div className="flex-shrink-0 bg-background border-b border-border">
             <div className="flex items-center gap-3 px-4 py-4">
               <User className="h-6 w-6 text-foreground" />
               <h2 className="text-xl font-semibold">Employee Directory</h2>
             </div>
-            
-            {/* Tab Selection */}
-            <div className="flex gap-2 px-4 pb-3">
-              <button
-                onClick={() => setActiveTab("Executives")}
-                className={`flex-1 px-4 py-2 rounded-lg font-medium transition-colors ${
-                  activeTab === "Executives"
-                    ? "bg-blue-600 text-white"
-                    : "bg-gray-700 text-gray-300 hover:bg-gray-600"
-                }`}
-              >
-                Executives
-              </button>
-              <button
-                onClick={() => setActiveTab("Managers")}
-                className={`flex-1 px-4 py-2 rounded-lg font-medium transition-colors ${
-                  activeTab === "Managers"
-                    ? "bg-blue-600 text-white"
-                    : "bg-gray-700 text-gray-300 hover:bg-gray-600"
-                }`}
-              >
-                Managers
-              </button>
-              <button
-                onClick={() => setActiveTab("SAO")}
-                className={`flex-1 px-4 py-2 rounded-lg font-medium transition-colors ${
-                  activeTab === "SAO"
-                    ? "bg-blue-600 text-white"
-                    : "bg-gray-700 text-gray-300 hover:bg-gray-600"
-                }`}
-              >
-                SAO
-              </button>
+
+            {/* Tab buttons */}
+            <div className="flex gap-2 px-4 pb-3 overflow-x-auto no-scrollbar">
+              {tabs.map((tab) => (
+                <button
+                  key={tab.key}
+                  onClick={() => setActiveTab(tab.key)}
+                  className={`flex-shrink-0 flex-1 px-4 py-2 rounded-lg font-medium transition-colors text-sm ${
+                    activeTab === tab.key
+                      ? "bg-blue-600 text-white"
+                      : "bg-gray-700 text-gray-300 hover:bg-gray-600"
+                  }`}
+                >
+                  {tab.label}
+                </button>
+              ))}
             </div>
           </div>
 
           <div className="flex-1 overflow-auto p-4">
             {activeTab === "Executives" && renderMobileCards("Executives", "yellow", executives)}
-            {activeTab === "Managers" && renderMobileCards("Managers", "orange", managers)}
-            {activeTab === "SAO" && renderMobileCards("SAO", "red", sao)}
+            {activeTab === "Managers"   && renderMobileCards("Managers",   "orange", managers)}
+            {activeTab === "SAO"        && renderMobileCards("SAO",        "red",    sao)}
+            {activeTab === "OPS LEAD"   && renderMobileCards("OPS LEAD",   "blue",   opsLead)}
           </div>
         </>
       ) : (
-        /* Desktop Layout */
+        /* ── DESKTOP ── */
         <>
           <div className="flex items-center gap-3 px-4 py-4 border-b border-border">
             <User className="h-6 w-6 text-foreground" />
             <h2 className="text-xl font-semibold">Employee Directory</h2>
           </div>
           <div className="flex-1 overflow-auto px-4 pb-4">
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mt-4">
+            <div className="grid grid-cols-1 md:grid-cols-4 gap-6 mt-4">
               {renderDesktopTable("Executives", "yellow", executives)}
-              {renderDesktopTable("Managers", "orange", managers)}
-              {renderDesktopTable("SAO", "red", sao)}
+              {renderDesktopTable("Managers",   "orange", managers)}
+              {renderDesktopTable("SAO",        "red",    sao)}
+              {renderDesktopTable("OPS LEAD",   "blue",   opsLead)}
             </div>
           </div>
         </>
       )}
 
+      {/* Dialog */}
       <Dialog open={showDialog} onOpenChange={setShowDialog}>
         <DialogContent className={isMobile ? "w-[90vw] max-w-md" : ""}>
           <DialogHeader>

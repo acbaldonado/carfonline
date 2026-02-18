@@ -176,7 +176,8 @@ export default function UsersList() {
 
   const boolText = (v: boolean) => (v ? 'Yes' : 'No');
 
-  const filteredUsers = users.filter((user) => {
+  const filteredUsers = users
+  .filter((user) => {
     const q = searchQuery.toLowerCase();
     return (
       user.userid?.toLowerCase().includes(q) ||
@@ -185,7 +186,8 @@ export default function UsersList() {
       user.company?.toLowerCase().includes(q) ||
       user.usergroup?.toLowerCase().includes(q)
     );
-  });
+  })
+  .sort((a, b) => (a.userid || '').localeCompare(b.userid || ''));
 
   if (loading) {
     return (

@@ -511,9 +511,9 @@ const DashboardLayout: React.FC<DashboardLayoutProps> = ({ userEmail, userId, on
 
         {/* Content */}
         <main
-          className="flex-1 p-3 md:p-4 lg:p-6 bg-background overflow-y-auto overflow-x-hidden min-h-0"
+          className="flex-1 bg-background overflow-hidden min-h-0"
         >
-          <div className="min-w-full">{renderContent()}</div>
+          <div className="h-full p-3 md:p-4 lg:p-6">{renderContent()}</div>
         </main>
 
         {/* Footer */}

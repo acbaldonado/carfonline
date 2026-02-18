@@ -178,7 +178,12 @@ const CustomerList: React.FC<CustomerListProps> = ({ userId, onNewCustomer, onEd
         console.log('User has all access - showing all records');
       }
 
-      setCustomers(filteredCustomers);
+      const sorted = [...filteredCustomers].sort((a, b) => {
+        const aId = parseInt(a['#'] || '0');
+        const bId = parseInt(b['#'] || '0');
+        return bId - aId;
+      });
+      setCustomers(sorted);
     } catch (error) {
       console.error("Error fetching Google Sheet:", error);
       toast({
