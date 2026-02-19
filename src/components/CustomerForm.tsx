@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Input } from '@/components/ui/input';
 import SupportingDocumentsDialog from '@/components/uploading/SupportingDocumentsDialog';
 import { useSystemSettings } from './SystemSettings/SystemSettingsContext';
@@ -93,6 +93,35 @@ const CustomerForm: React.FC<CustomerFormProps> = ({
   const isApproved = 
     formData.approvestatus === "APPROVED" || 
     (formData.approvestatus === "PENDING" && !userPermissions.hasEditAccess);
+
+  const isSoldToParty = formData.ismother.includes('SOLD TO PARTY');
+
+  // ─── Auto-fill: CORPORATION + SOLD TO PARTY ───────────────────────────────
+  // soldtoparty → shiptoparty | billaddress → deladdress
+  useEffect(() => {
+    if (formData.type.includes('CORPORATION') && isSoldToParty) {
+      setFormData(prev => ({
+        ...prev,
+        shiptoparty: prev.soldtoparty || '',
+        deladdress: prev.billaddress || '',
+      }));
+    }
+  }, [formData.soldtoparty, formData.billaddress, formData.type, formData.ismother]);
+
+  // ─── Auto-fill: PERSONAL + SOLD TO PARTY ──────────────────────────────────
+  // "LASTNAME, FIRSTNAME, MIDDLENAME" → shiptoparty | billaddress → deladdress
+  useEffect(() => {
+    if (formData.type.includes('PERSONAL') && isSoldToParty) {
+      const fullName = [formData.lastname, formData.firstname, formData.middlename]
+        .filter(Boolean)
+        .join(', ');
+      setFormData(prev => ({
+        ...prev,
+        shiptoparty: fullName,
+        deladdress: prev.billaddress || '',
+      }));
+    }
+  }, [formData.lastname, formData.firstname, formData.middlename, formData.billaddress, formData.type, formData.ismother]);
 
   const handlePrintClick = () => {
     setShowPrintView(true);
@@ -406,6 +435,7 @@ const CustomerForm: React.FC<CustomerFormProps> = ({
                   type="text"
                   value={formData.soldtoparty}
                   onChange={(e) => handleInputChange('soldtoparty', e.target.value)}
+                  disabled={isApproved}
                   className={`w-full rounded-lg border border-gray-300 ${isApproved ? "bg-gray-200" : "bg-white"} px-3 md:px-4 py-2 text-sm md:text-base text-gray-900 
                             focus:border-blue-500 focus:ring-2 focus:ring-blue-300 transition-all duration-200 shadow-sm ${invalidFields.includes('soldtoparty') ? 'error-border' : ''}`}
                 />
@@ -795,12 +825,13 @@ const CustomerForm: React.FC<CustomerFormProps> = ({
                 <strong className="font-bold">TRADE NAME (BUSINESS STYLE):</strong>
             </div>
             <div className="grid grid-cols-1 md:grid-cols-3 gap-3 md:gap-6">
+              {/* BRANCH (SHIP TO PARTY) - disabled & auto-filled when SOLD TO PARTY */}
               <input
                 type="text"
                 value={formData.shiptoparty}
                 onChange={(e) => handleInputChange('shiptoparty', e.target.value)}
-                disabled={isApproved}
-                  className={`w-full rounded-lg border border-gray-300 ${isApproved ? "bg-gray-200" : "bg-white"} px-3 md:px-4 py-2 text-sm md:text-base text-gray-900 focus:border-blue-500 focus:ring-2 focus:ring-blue-300 transition-all duration-200 shadow-sm ${invalidFields.includes('shiptoparty') ? 'error-border' : ''}`}
+                disabled={isApproved || isSoldToParty}
+                className={`w-full rounded-lg border border-gray-300 ${isApproved || isSoldToParty ? "bg-gray-200" : "bg-white"} px-3 md:px-4 py-2 text-sm md:text-base text-gray-900 focus:border-blue-500 focus:ring-2 focus:ring-blue-300 transition-all duration-200 shadow-sm ${invalidFields.includes('shiptoparty') ? 'error-border' : ''}`}
               />
               <input
                 type="text"
@@ -822,12 +853,13 @@ const CustomerForm: React.FC<CustomerFormProps> = ({
           {/* Delivery Address */}
           <div className="mt-8">
             <div className="text-base md:text-xl font-bold mb-2">DELIVERY ADDRESS:</div>
+            {/* disabled & auto-filled when SOLD TO PARTY */}
             <input
               type="text"
               value={formData.deladdress}
-              disabled={isApproved}
+              disabled={isApproved || isSoldToParty}
               onChange={(e) => handleInputChange('deladdress', e.target.value)}
-            className= {`w-full rounded-lg border border-gray-300 ${isApproved ? "bg-gray-200" : "bg-white"} px-3 md:px-4 py-2 text-sm md:text-base text-gray-900 focus:border-blue-500 focus:ring-2 focus:ring-blue-300 transition-all duration-200 shadow-sm ${invalidFields.includes('deladdress') ? 'error-border' : ''}`}
+              className={`w-full rounded-lg border border-gray-300 ${isApproved || isSoldToParty ? "bg-gray-200" : "bg-white"} px-3 md:px-4 py-2 text-sm md:text-base text-gray-900 focus:border-blue-500 focus:ring-2 focus:ring-blue-300 transition-all duration-200 shadow-sm ${invalidFields.includes('deladdress') ? 'error-border' : ''}`}
             />
           </div>
 
@@ -889,18 +921,19 @@ const CustomerForm: React.FC<CustomerFormProps> = ({
             
             <div className="mt-4">
               <strong className="text-sm md:text-base">Supporting Documents:</strong>
+              {/* CHOOSE FILE disabled on new entry (!isEditMode) unless files already exist */}
               <button
-              type="button"
-              className={`ml-0 md:ml-4 mt-2 md:mt-0 px-3 md:px-4 py-2 rounded text-sm md:text-base ${
-                hasAnyFiles
+                type="button"
+                className={`ml-0 md:ml-4 mt-2 md:mt-0 px-3 md:px-4 py-2 rounded text-sm md:text-base ${
+                  hasAnyFiles
                     ? 'bg-green-600 hover:bg-green-700 text-white'
                     : 'bg-blue-500 hover:bg-blue-600 text-white'
-                }`}
+                } ${!isEditMode && !hasAnyFiles ? 'opacity-50 cursor-not-allowed' : ''}`}
                 onClick={() => setDialogOpen(true)}
-                disabled={loading || (!isEditMode && !hasAnyFiles)} 
-            >
-              {loading ? 'Loading...' : hasAnyFiles ? 'VIEW FILES' : 'CHOOSE FILE'}
-            </button>
+                disabled={loading || (!isEditMode && !hasAnyFiles)}
+              >
+                {loading ? 'Loading...' : hasAnyFiles ? 'VIEW FILES' : 'CHOOSE FILE'}
+              </button>
               <SupportingDocumentsDialog
                 isOpen={dialogOpen}
                 onClose={() => setDialogOpen(false)}
@@ -909,7 +942,6 @@ const CustomerForm: React.FC<CustomerFormProps> = ({
                 gencode={formData.gencode}
                 approvestatus={formData.approvestatus} 
                 customerType={formData.type[0] ?? ''} 
-                
               />
             </div>
           </div>
