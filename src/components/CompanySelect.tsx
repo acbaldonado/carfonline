@@ -19,7 +19,6 @@ const CompanySelect: React.FC<CompanySelectProps> = ({ value, onChange, options,
     label: `${opt.custname} (${opt.custno})`,
   }));
 
-  alert("23");
   const selectedOption = selectOptions.find(opt => opt.value === value) || null;
 
   return (

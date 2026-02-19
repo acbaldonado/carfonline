@@ -44,7 +44,7 @@ const Index = () => {
   useEffect(() => {
     const { data: listener } = supabase.auth.onAuthStateChange(
       (event, session) => {
-        console.log("Auth change:", event);
+        // console.log("Auth change:", event);
 
         if (!session) {
           // ❌ Session gone → logout UI

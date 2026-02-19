@@ -897,7 +897,7 @@ const CustomerForm: React.FC<CustomerFormProps> = ({
                     : 'bg-blue-500 hover:bg-blue-600 text-white'
                 }`}
                 onClick={() => setDialogOpen(true)}
-                disabled={loading}
+                disabled={loading || (!isEditMode && !hasAnyFiles)} 
             >
               {loading ? 'Loading...' : hasAnyFiles ? 'VIEW FILES' : 'CHOOSE FILE'}
             </button>

@@ -1029,13 +1029,15 @@ export const useCustomerForm = (
       const missingFields: string[] = [];
       const requestFor = formData.requestfor[0];
       const customerType = formData.type[0];
+      const mother = formData.ismother[0];
       const isActivation = requestFor === 'ACTIVATION';
       const isCorporation = customerType === 'CORPORATION';
-
+      const isPersonal = customerType === 'PERSONAL';                          // ← add
+      const isMotherShipToParty = mother === 'SHIP TO PARTY'; 
       fields?.forEach((f) => {
         if (f.fields === 'boscode' && isActivation) return;
-        if (isCorporation && ['firstname', 'middlename', 'lastname'].includes(f.fields)) return;
-
+        if (isCorporation && ['firstname', 'middlename', 'lastname'].includes(f.fields)) return;  
+        if (isPersonal && isMotherShipToParty && ['firstname', 'middlename', 'lastname'].includes(f.fields)) return;
         if (f.isrequired) {
           const value = formData[f.fields as keyof CustomerFormData];
           if (
