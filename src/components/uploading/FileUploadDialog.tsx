@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { X, Upload, File as FileIcon, Trash2, ExternalLink } from 'lucide-react';
+import { X, Upload, File as FileIcon, Trash2, ExternalLink, CheckCircle2, Loader2 } from 'lucide-react';
 import { toast } from '@/hooks/use-toast';
 
 export interface DriveFile {
@@ -36,8 +36,13 @@ export default function FileUploadDialog({
   const [isUploading, setIsUploading] = useState(false);
   const [progress, setProgress] = useState(0);
   const [newFiles, setNewFiles] = useState<File[]>([]);
+  const [isDragging, setIsDragging] = useState(false);
+
   const BASE_URL = import.meta.env.VITE_API_BASE_URL || '';
-  
+
+  // canUpload: only allowed when approvestatus is blank
+  const canUpload = approvestatus === '';
+
   const addFilesWithoutDuplicates = (newFilesToAdd: File[]) => {
     setNewFiles((prev) => {
       const combined = [...prev, ...newFilesToAdd];
@@ -88,35 +93,34 @@ export default function FileUploadDialog({
     e.target.value = '';
   };
 
+  const handleDrop = (e: React.DragEvent) => {
+    e.preventDefault();
+    setIsDragging(false);
+    const files = Array.from(e.dataTransfer.files);
+    addFilesWithoutDuplicates(files);
+  };
+
   const handleRemoveFile = (index: number) => {
     setNewFiles((prev) => prev.filter((_, i) => i !== index));
   };
 
   const handleDeleteUploadedFile = async (fileId: string, index: number) => {
-    if (!confirm('Are you sure you want to delete this file?')) {
-      return;
-    }
+    if (!confirm('Are you sure you want to delete this file?')) return;
 
     try {
       const response = await fetch(`${BASE_URL}/api/delete-file/${fileId}`, {
         method: 'DELETE',
-        headers: {
-          'Content-Type': 'application/json',
-        },
+        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ gencode, docType }),
       });
 
-      if (!response.ok) {
-        throw new Error('Failed to delete file');
-      }
+      if (!response.ok) throw new Error('Failed to delete file');
 
       setUploadedFiles((prev) => prev.filter((_, i) => i !== index));
-      
       if (selectedFile && 'id' in selectedFile && selectedFile.id === fileId) {
         setSelectedFile(null);
         setPreviewUrl(null);
       }
-
       toast({ title: 'Success', description: 'File deleted successfully!' });
     } catch (err) {
       console.error('Delete error:', err);
@@ -125,36 +129,21 @@ export default function FileUploadDialog({
   };
 
   const handleViewFullScreen = (e?: React.MouseEvent) => {
-    if (e) {
-      e.preventDefault();
-      e.stopPropagation();
-    }
-    
+    if (e) { e.preventDefault(); e.stopPropagation(); }
     if (!selectedFile) return;
 
     let url: string | null = null;
-
     if ('type' in selectedFile) {
       url = URL.createObjectURL(selectedFile);
     } else if ('id' in selectedFile && previewUrl) {
       url = previewUrl;
     }
-
-    if (url) {
-      window.open(url, '_blank');
-    }
+    if (url) window.open(url, '_blank');
   };
 
   const handleUpload = async () => {
-    if (newFiles.length === 0) {
-      alert('No files to upload');
-      return;
-    }
-
-    if (!gencode) {
-      alert('CARF No. is required for upload');
-      return;
-    }
+    if (newFiles.length === 0) { alert('No files to upload'); return; }
+    if (!gencode) { alert('CARF No. is required for upload'); return; }
 
     setIsUploading(true);
     setProgress(0);
@@ -163,17 +152,11 @@ export default function FileUploadDialog({
       const formData = new FormData();
       formData.append('gencode', gencode);
       formData.append('docType', docType);
-      
-      newFiles.forEach((file) => {
-        formData.append('files', file);
-      });
+      newFiles.forEach((file) => formData.append('files', file));
 
       const progressInterval = setInterval(() => {
         setProgress((prev) => {
-          if (prev >= 90) {
-            clearInterval(progressInterval);
-            return 90;
-          }
+          if (prev >= 90) { clearInterval(progressInterval); return 90; }
           return prev + 10;
         });
       }, 200);
@@ -197,18 +180,7 @@ export default function FileUploadDialog({
         throw new Error(errorMessage);
       }
 
-      let result;
-      try {
-        result = JSON.parse(responseText);
-      } catch (e) {
-        console.error('Failed to parse response JSON:', e);
-        throw new Error('Invalid response from server');
-      }
-
-      // console.log('Upload successful:', result);
-
       setProgress(100);
-
       setTimeout(() => {
         setIsUploading(false);
         toast({ title: 'Success', description: 'Files uploaded successfully!' });
@@ -218,210 +190,311 @@ export default function FileUploadDialog({
     } catch (err: any) {
       setIsUploading(false);
       setProgress(0);
-      alert(`Failed to upload files: ${err.message}\n\nCheck console for details.`);
+      alert(`Failed to upload files: ${err.message}`);
     }
   };
 
   const getPreviewContent = () => {
     if (!selectedFile) return null;
-    
+
     if ('type' in selectedFile && selectedFile.type.startsWith('image/')) {
-      return <img src={URL.createObjectURL(selectedFile)} alt={selectedFile.name} className="max-h-full w-full object-contain" />;
+      return <img src={URL.createObjectURL(selectedFile)} alt={selectedFile.name} className="max-h-full w-full object-contain rounded-lg" />;
     }
     if ('type' in selectedFile && selectedFile.type === 'application/pdf') {
-      return <iframe src={URL.createObjectURL(selectedFile)} title={selectedFile.name} className="w-full h-full" />;
+      return <iframe src={URL.createObjectURL(selectedFile)} title={selectedFile.name} className="w-full h-full rounded-lg" />;
     }
-    
     if ('id' in selectedFile && previewUrl) {
       if (selectedFile.mimeType?.startsWith('image/')) {
-        return <img src={previewUrl} alt={selectedFile.name} className="max-h-full w-full object-contain" />;
+        return <img src={previewUrl} alt={selectedFile.name} className="max-h-full w-full object-contain rounded-lg" />;
       }
       if (selectedFile.mimeType === 'application/pdf') {
-        return <iframe src={previewUrl} title={selectedFile.name} className="w-full h-full" />;
+        return <iframe src={previewUrl} title={selectedFile.name} className="w-full h-full rounded-lg" />;
       }
-      return <p className="text-gray-600 text-center text-sm md:text-base">{selectedFile.name}</p>;
     }
-    
-    return <p className="text-gray-600 text-center text-sm md:text-base">{selectedFile.name}</p>;
+    return (
+      <div className="flex flex-col items-center gap-3 text-gray-400">
+        <FileIcon className="w-12 h-12" />
+        <p className="text-sm font-medium text-gray-500">{selectedFile.name}</p>
+        <p className="text-xs text-gray-400">Preview not available</p>
+      </div>
+    );
   };
 
   if (!isOpen) return null;
 
   const allFiles = [...uploadedFiles, ...newFiles];
-  const canDeleteUploaded = approvestatus === '';
 
   return (
-    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-2 md:p-4 z-[70]">
-      <div className="bg-white rounded-lg shadow-xl w-full max-w-[95vw] md:max-w-[1400px] h-[90vh] md:h-[85vh] flex flex-col md:flex-row overflow-hidden">
-        {/* Left: Preview & Upload */}
-        <div className="flex-1 p-4 md:p-12 border-b md:border-b-0 md:border-r border-gray-200 flex flex-col overflow-hidden">
-          <div className="flex items-center justify-between mb-4 md:mb-8">
-            <h2 className="text-xl md:text-3xl font-bold text-gray-800 flex items-center gap-2 md:gap-4">
-              <Upload className="w-5 h-5 md:w-7 md:h-7" />
-              Attachment
-            </h2>
-            {/* View Full button */}
+    <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center p-2 md:p-4 z-[70]">
+      <div
+        className="bg-white rounded-2xl w-full max-w-[95vw] md:max-w-[1200px] h-[90vh] md:h-[82vh] flex flex-col md:flex-row overflow-hidden"
+        style={{ boxShadow: '0 30px 70px -12px rgba(0,0,0,0.28), 0 0 0 1px rgba(0,0,0,0.05)' }}
+      >
+        {/* ── Left: Preview panel ── */}
+        <div className="flex-1 flex flex-col overflow-hidden border-b md:border-b-0 md:border-r border-gray-100">
+          {/* Accent bar */}
+          <div className="h-1 w-full bg-gradient-to-r from-blue-500 via-indigo-400 to-blue-600 flex-shrink-0" />
+
+          {/* Left header */}
+          <div className="px-5 pt-5 pb-4 flex items-center justify-between flex-shrink-0">
+            <div className="flex items-center gap-2">
+              <div className="w-7 h-7 rounded-lg bg-indigo-100 flex items-center justify-center">
+                <Upload className="w-3.5 h-3.5 text-indigo-600" />
+              </div>
+              <div>
+                <h2 className="text-sm font-bold text-gray-900 leading-tight">Attachment Preview</h2>
+                <p className="text-[10px] text-gray-400 font-mono">{docType}</p>
+              </div>
+            </div>
+
             {selectedFile && (
               <button
-                onClick={(e) => {
-                  e.preventDefault();
-                  e.stopPropagation();
-                  handleViewFullScreen(e);
-                }}
+                onClick={handleViewFullScreen}
                 type="button"
-                className="px-3 md:px-4 py-1.5 md:py-2 bg-gray-100 hover:bg-gray-200 text-gray-700 rounded-lg flex items-center gap-1 md:gap-2 transition-colors text-sm"
-                title="Open in new tab"
+                className="flex items-center gap-1.5 px-3 py-1.5 text-[11px] font-semibold text-gray-500 hover:text-indigo-600 hover:bg-indigo-50 rounded-lg transition-all"
               >
-                <ExternalLink className="w-4 h-4 md:w-5 md:h-5" />
-                <span className="hidden sm:inline font-medium">View Full</span>
+                <ExternalLink className="w-3.5 h-3.5" />
+                Open Full
               </button>
             )}
           </div>
 
-          <div className="flex-1 flex flex-col justify-between items-center overflow-auto min-h-0">
+          <div className="h-px bg-gray-100 mx-5 flex-shrink-0" />
+
+          {/* Drop zone / preview area */}
+          <div className="flex-1 p-4 flex flex-col gap-4 overflow-hidden min-h-0">
             <div
-              className="w-full border-2 border-dashed border-gray-300 rounded-lg text-center hover:border-green-500 cursor-pointer flex flex-col justify-center items-center mb-4 flex-1 relative min-h-[200px]"
+              className={`flex-1 rounded-xl border-2 border-dashed flex items-center justify-center transition-all relative overflow-hidden
+                ${canUpload ? 'cursor-pointer' : 'cursor-default'}
+                ${isDragging
+                  ? 'border-indigo-400 bg-indigo-50'
+                  : selectedFile
+                    ? 'border-gray-200 bg-gray-50'
+                    : canUpload
+                      ? 'border-gray-200 hover:border-indigo-300 hover:bg-indigo-50/30 bg-gray-50/50'
+                      : 'border-gray-200 bg-gray-50/50'
+                }`}
               onClick={(e) => {
-                if (e.target === e.currentTarget || (e.target as HTMLElement).closest('.drop-zone-content')) {
-                  e.preventDefault();
-                  e.stopPropagation();
+                if (!canUpload) return;
+                if (!selectedFile || e.target === e.currentTarget) {
                   document.getElementById('file-input')?.click();
                 }
               }}
+              onDragOver={(e) => {
+                if (!canUpload) return;
+                e.preventDefault();
+                setIsDragging(true);
+              }}
+              onDragLeave={() => setIsDragging(false)}
+              onDrop={(e) => {
+                if (!canUpload) return;
+                handleDrop(e);
+              }}
             >
               {selectedFile ? (
-                <div className="drop-zone-content w-full h-full flex items-center justify-center p-2">
+                <div className="w-full h-full flex items-center justify-center p-3">
                   {getPreviewContent()}
                 </div>
-              ) : (
-                <div className="drop-zone-content p-4">
-                  <div className="w-20 h-20 md:w-40 md:h-40 bg-green-500 rounded-full flex items-center justify-center mb-3 md:mb-6 mx-auto">
-                    <Upload className="w-10 h-10 md:w-20 md:h-20 text-white" />
+              ) : canUpload ? (
+                <div className="flex flex-col items-center gap-3 pointer-events-none select-none">
+                  <div className="w-16 h-16 rounded-2xl bg-indigo-100 flex items-center justify-center">
+                    <Upload className="w-8 h-8 text-indigo-500" />
                   </div>
-                  <p className="text-gray-700 font-semibold mb-1 text-sm md:text-lg">Drag files here</p>
-                  <p className="text-gray-500 text-xs md:text-base">or click to browse</p>
+                  <div className="text-center">
+                    <p className="text-sm font-semibold text-gray-700">Drop files here</p>
+                    <p className="text-xs text-gray-400 mt-0.5">or click to browse</p>
+                  </div>
+                  {isDragging && (
+                    <p className="text-xs font-semibold text-indigo-500 animate-pulse">Release to add files</p>
+                  )}
+                </div>
+              ) : (
+                <div className="flex flex-col items-center gap-3 pointer-events-none select-none">
+                  <div className="w-16 h-16 rounded-2xl bg-gray-100 flex items-center justify-center">
+                    <FileIcon className="w-8 h-8 text-gray-400" />
+                  </div>
+                  <div className="text-center">
+                    <p className="text-sm font-semibold text-gray-500">View only</p>
+                    <p className="text-xs text-gray-400 mt-0.5">Select a file on the right to preview</p>
+                  </div>
                 </div>
               )}
             </div>
 
-            <button
-              type="button"
-              onClick={() => document.getElementById('file-input')?.click()}
-              disabled={isUploading}
-              className="mt-2 md:mt-4 px-4 md:px-6 py-2 md:py-3 bg-blue-600 text-white rounded hover:bg-blue-700 transition-colors flex items-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed text-sm md:text-base"
-            >
-              <Upload className="w-4 h-4 md:w-5 md:h-5" />
-              {isUploading ? 'Uploading...' : 'Select Files'}
-            </button>
-
-            <input
-              type="file"
-              id="file-input"
-              className="hidden"
-              multiple
-              onChange={handleFileSelect}
-              disabled={isUploading}
-            />
-          </div>
-
-          {isUploading && (
-            <div className="mt-4 md:mt-6 w-full">
-              <p className="text-sm md:text-lg text-gray-700 mb-2 font-medium">Uploading... {progress}%</p>
-              <div className="w-full bg-gray-200 rounded-full h-3 md:h-4">
-                <div
-                  className="bg-green-500 h-3 md:h-4 rounded-full transition-all duration-300"
-                  style={{ width: `${progress}%` }}
-                />
+            {/* Upload progress */}
+            {isUploading && (
+              <div className="flex-shrink-0 bg-gray-50 rounded-xl border border-gray-100 px-4 py-3">
+                <div className="flex items-center justify-between mb-2">
+                  <div className="flex items-center gap-2">
+                    <Loader2 className="w-3.5 h-3.5 text-indigo-500 animate-spin" />
+                    <span className="text-xs font-semibold text-gray-700">Uploading files...</span>
+                  </div>
+                  <span className="text-xs font-bold text-indigo-600">{progress}%</span>
+                </div>
+                <div className="h-1.5 bg-gray-200 rounded-full overflow-hidden">
+                  <div
+                    className="h-full rounded-full transition-all duration-300"
+                    style={{
+                      width: `${progress}%`,
+                      background: 'linear-gradient(90deg, #6366f1, #3b82f6)',
+                    }}
+                  />
+                </div>
               </div>
-            </div>
-          )}
-        </div>
-
-        {/* Right: Uploaded & Drive files */}
-        <div className="w-full md:w-96 bg-gray-50 p-4 md:p-10 flex flex-col max-h-[50vh] md:max-h-none overflow-hidden">
-          <div className="flex items-center justify-between mb-4 md:mb-6">
-            <h3 className="text-lg md:text-2xl font-bold text-gray-800">
-              Files ({allFiles.length})
-            </h3>
-            <button
-              onClick={onClose}
-              disabled={isUploading}
-              className="text-gray-500 hover:text-gray-700 disabled:opacity-50"
-            >
-              <X className="w-5 h-5 md:w-6 md:h-6" />
-            </button>
-          </div>
-
-          <div className="flex-1 overflow-y-auto space-y-2 md:space-y-4 min-h-0">
-            {allFiles.length === 0 && (
-              <p className="text-gray-400 text-center py-10 md:py-20 text-sm md:text-base">No files available</p>
             )}
 
-            {/* Existing Drive files */}
-            {uploadedFiles.map((file, idx) => (
-              <div
-                key={`drive-${idx}`}
-                className="bg-white rounded-lg p-3 md:p-5 shadow-sm flex items-center gap-2 md:gap-4 hover:bg-gray-100"
+            {/* Browse button — hidden when locked */}
+            {canUpload && (
+              <button
+                type="button"
+                onClick={() => document.getElementById('file-input')?.click()}
+                disabled={isUploading}
+                className="flex-shrink-0 flex items-center justify-center gap-2 py-2.5 px-4 rounded-xl border-2 border-dashed border-indigo-200 text-indigo-600 hover:bg-indigo-50 hover:border-indigo-400 transition-all text-xs font-semibold disabled:opacity-50 disabled:cursor-not-allowed"
               >
-                <FileIcon className="w-5 h-5 md:w-6 md:h-6 text-blue-600 flex-shrink-0" />
-                <p 
-                  className="truncate flex-1 cursor-pointer text-sm md:text-base" 
-                  onClick={() => setSelectedFile(file)}
-                >
-                  {file.name}
+                <Upload className="w-3.5 h-3.5" />
+                Browse & Select Files
+              </button>
+            )}
+
+            {/* Hidden file input — only rendered when upload is allowed */}
+            {canUpload && (
+              <input
+                type="file"
+                id="file-input"
+                className="hidden"
+                multiple
+                onChange={handleFileSelect}
+                disabled={isUploading}
+              />
+            )}
+          </div>
+        </div>
+
+        {/* ── Right: File list panel ── */}
+        <div className="w-full md:w-80 flex flex-col overflow-hidden bg-gray-50/60 max-h-[45vh] md:max-h-none">
+          {/* Right header */}
+          <div className="px-5 pt-5 pb-4 flex items-center justify-between flex-shrink-0">
+            <div>
+              <h3 className="text-sm font-bold text-gray-900">
+                Files
+                <span className="ml-1.5 text-[11px] font-semibold text-gray-400 bg-gray-200 px-1.5 py-0.5 rounded-full">
+                  {allFiles.length}
+                </span>
+              </h3>
+              {newFiles.length > 0 && (
+                <p className="text-[10px] text-amber-500 font-semibold mt-0.5">
+                  {newFiles.length} pending upload
                 </p>
-                <span className="text-[10px] md:text-xs text-green-600 font-semibold">SAVED</span>
-                {canDeleteUploaded && 'id' in file && (
+              )}
+            </div>
+            <button
+              onClick={onClose}
+              disabled={isUploading}
+              className="w-7 h-7 flex items-center justify-center rounded-full text-gray-400 hover:text-gray-600 hover:bg-gray-200 transition-all disabled:opacity-40"
+            >
+              <X className="w-3.5 h-3.5" />
+            </button>
+          </div>
+
+          <div className="h-px bg-gray-200 mx-5 flex-shrink-0" />
+
+          {/* File list */}
+          <div className="flex-1 overflow-y-auto px-4 py-3 space-y-1.5 min-h-0">
+            {allFiles.length === 0 && (
+              <div className="flex flex-col items-center justify-center py-12 gap-2 text-gray-400">
+                <FileIcon className="w-8 h-8 text-gray-300" />
+                <p className="text-xs font-medium">No files yet</p>
+                <p className="text-[11px] text-gray-300">
+                  {canUpload ? 'Add files using the left panel' : 'No documents uploaded'}
+                </p>
+              </div>
+            )}
+
+            {/* Saved Drive files */}
+            {uploadedFiles.map((file, idx) => (
+              <button
+                key={`drive-${idx}`}
+                type="button"
+                onClick={() => setSelectedFile(file)}
+                className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-xl border text-left transition-all group
+                  ${selectedFile && 'id' in selectedFile && 'id' in file && selectedFile.id === file.id
+                    ? 'bg-indigo-50 border-indigo-200'
+                    : 'bg-white border-gray-200 hover:border-indigo-200 hover:bg-indigo-50/40'
+                  }`}
+              >
+                <div className="w-7 h-7 rounded-lg bg-emerald-100 flex items-center justify-center flex-shrink-0">
+                  <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600" />
+                </div>
+                <div className="flex-1 min-w-0">
+                  <p className="text-xs font-semibold text-gray-700 truncate">{file.name}</p>
+                  <p className="text-[10px] text-emerald-500 font-semibold mt-0.5">Saved</p>
+                </div>
+                {/* Delete only shown when canUpload (same as canDeleteUploaded) */}
+                {canUpload && 'id' in file && (
                   <button
-                    onClick={() => handleDeleteUploadedFile(file.id, idx)}
+                    onClick={(e) => { e.stopPropagation(); handleDeleteUploadedFile(file.id, idx); }}
                     disabled={isUploading}
-                    className="text-red-500 hover:text-red-700 disabled:opacity-50"
+                    className="opacity-0 group-hover:opacity-100 w-6 h-6 flex items-center justify-center rounded-lg text-red-400 hover:text-red-600 hover:bg-red-50 transition-all disabled:opacity-30 flex-shrink-0"
                     title="Delete file"
                   >
-                    <Trash2 className="w-4 h-4 md:w-5 md:h-5" />
+                    <Trash2 className="w-3 h-3" />
                   </button>
                 )}
-              </div>
+              </button>
             ))}
 
-            {/* New files to upload */}
+            {/* New pending files */}
             {newFiles.map((file, idx) => (
-              <div
+              <button
                 key={`new-${idx}`}
-                className="bg-white rounded-lg p-3 md:p-5 shadow-sm flex items-center gap-2 md:gap-4 hover:bg-gray-100"
+                type="button"
+                onClick={() => setSelectedFile(file)}
+                className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-xl border text-left transition-all group
+                  ${selectedFile && 'name' in selectedFile && selectedFile.name === file.name && !('id' in selectedFile)
+                    ? 'bg-amber-50 border-amber-200'
+                    : 'bg-white border-gray-200 hover:border-amber-200 hover:bg-amber-50/40'
+                  }`}
               >
-                <FileIcon className="w-5 h-5 md:w-6 md:h-6 text-orange-600 flex-shrink-0" />
-                <div
-                  className="truncate flex-1 cursor-pointer text-sm md:text-base"
-                  onClick={() => setSelectedFile(file)}
-                >
-                  {file.name}
+                <div className="w-7 h-7 rounded-lg bg-amber-100 flex items-center justify-center flex-shrink-0">
+                  <Upload className="w-3.5 h-3.5 text-amber-600" />
+                </div>
+                <div className="flex-1 min-w-0">
+                  <p className="text-xs font-semibold text-gray-700 truncate">{file.name}</p>
+                  <p className="text-[10px] text-amber-500 font-semibold mt-0.5">Pending upload</p>
                 </div>
                 <button
-                  onClick={() => handleRemoveFile(idx)}
+                  onClick={(e) => { e.stopPropagation(); handleRemoveFile(idx); }}
                   disabled={isUploading}
-                  className="text-red-500 hover:text-red-700 disabled:opacity-50"
+                  className="opacity-0 group-hover:opacity-100 w-6 h-6 flex items-center justify-center rounded-lg text-red-400 hover:text-red-600 hover:bg-red-50 transition-all disabled:opacity-30 flex-shrink-0"
                 >
-                  <Trash2 className="w-4 h-4 md:w-5 md:h-5" />
+                  <Trash2 className="w-3 h-3" />
                 </button>
-              </div>
+              </button>
             ))}
           </div>
 
-          <div className="mt-4 md:mt-8 pt-4 md:pt-6 border-t border-gray-200 flex flex-col md:flex-row gap-2 md:gap-4">
+          {/* Footer actions */}
+          <div className="px-4 py-4 border-t border-gray-200 flex flex-col gap-2 flex-shrink-0">
+            {/* Upload button — hidden when locked */}
+            {canUpload && (
+              <button
+                onClick={handleUpload}
+                disabled={newFiles.length === 0 || isUploading || !gencode}
+                className="w-full py-2.5 rounded-xl text-xs font-bold bg-indigo-600 hover:bg-indigo-700 text-white transition-all shadow-sm hover:shadow-md active:scale-[0.99] disabled:opacity-40 disabled:cursor-not-allowed disabled:shadow-none flex items-center justify-center gap-2"
+              >
+                {isUploading ? (
+                  <><Loader2 className="w-3.5 h-3.5 animate-spin" />Uploading...</>
+                ) : (
+                  <><Upload className="w-3.5 h-3.5" />Upload {newFiles.length > 0 ? `(${newFiles.length})` : ''}</>
+                )}
+              </button>
+            )}
             <button
               onClick={onClose}
-              className="flex-1 px-4 md:px-6 py-2 md:py-4 border border-gray-300 text-gray-700 rounded hover:bg-gray-100 disabled:opacity-50 disabled:cursor-not-allowed text-sm md:text-base"
               disabled={isUploading}
+              className="w-full py-2 rounded-xl text-xs font-semibold text-gray-500 hover:text-gray-700 hover:bg-gray-100 transition-all disabled:opacity-40 disabled:cursor-not-allowed"
             >
-              Cancel
-            </button>
-            <button
-              onClick={handleUpload}
-              disabled={newFiles.length === 0 || isUploading || !gencode}
-              className="flex-1 px-4 md:px-6 py-2 md:py-4 bg-green-500 text-white rounded hover:bg-green-600 disabled:opacity-50 disabled:cursor-not-allowed text-sm md:text-base"
-            >
-              {isUploading ? 'Uploading...' : `Upload (${newFiles.length})`}
+              {canUpload ? 'Cancel' : 'Close'}
             </button>
           </div>
         </div>

@@ -5,13 +5,14 @@ import path from 'path';
 import multer from 'multer'; // ✅ MISSING IMPORT
 import { Readable } from 'stream'; // ✅ MISSING IMPORT
 import 'dotenv/config';
+import archiver from 'archiver';
 
 const app = express();
 const PORT = 3001;
 
 // Main parent folder ID
-// const MAIN_FOLDER_ID = '15GyW7ZZt-XFfdze96pJmsoNSgdU7PLmT';
-const MAIN_FOLDER_ID = '1H1tfPxV77LqQ_De4P04Xy2FSbHCe2rwN';
+const MAIN_FOLDER_ID = '15GyW7ZZt-XFfdze96pJmsoNSgdU7PLmT';
+// const MAIN_FOLDER_ID = '1H1tfPxV77LqQ_De4P04Xy2FSbHCe2rwN';
 
 app.use(cors({ origin: 'http://localhost:8080' }));
 app.use(express.json());
@@ -124,7 +125,6 @@ app.post('/api/upload-files', upload.array('files'), async (req, res) => {
 
     const spFolderName = folderMapping[docType];
     if (!spFolderName) {
-      console.log("2323");
       return res.status(400).json({ error: 'Invalid docType' });
     }
 
@@ -191,6 +191,7 @@ app.get('/api/gencode/:gencode', async (req, res) => {
     if (!folderRes.data.files || folderRes.data.files.length === 0) {
       return res.json({
         birBusinessRegistration: [],
+        sp2GovernmentId: [],
         secRegistration: [],
         generalInformation: [],
         boardResolution: [],
@@ -218,6 +219,7 @@ app.get('/api/gencode/:gencode', async (req, res) => {
 
     const result = {
       birBusinessRegistration: [],
+      sp2GovernmentId: [], 
       secRegistration: [],
       generalInformation: [],
       boardResolution: [],
@@ -291,6 +293,53 @@ app.delete('/api/delete-file/:id', async (req, res) => {
   }
 });
 
+app.get('/api/download-zip/:gencode', async (req, res) => {
+  try {
+    const { gencode } = req.params;
+    const client = await auth.getClient();
+    const driveApi = google.drive({ version: 'v3', auth: client });
+
+    // Find gencode folder
+    const folderRes = await driveApi.files.list({
+      q: `'${MAIN_FOLDER_ID}' in parents and name='${gencode}' and mimeType='application/vnd.google-apps.folder' and trashed=false`,
+      fields: 'files(id,name)',
+    });
+
+    if (!folderRes.data.files?.length) {
+      return res.status(404).json({ error: 'Gencode folder not found' });
+    }
+
+    const gencodeFolderId = folderRes.data.files[0].id;
+
+    // List subfolders
+    const subfoldersRes = await driveApi.files.list({
+      q: `'${gencodeFolderId}' in parents and mimeType='application/vnd.google-apps.folder' and trashed=false`,
+      fields: 'files(id,name)',
+    });
+
+    res.setHeader('Content-Type', 'application/zip');
+    res.setHeader('Content-Disposition', `attachment; filename="${gencode}-documents.zip"`);
+
+    const archive = archiver('zip', { zlib: { level: 9 } });
+    archive.pipe(res);
+
+    for (const folder of subfoldersRes.data.files || []) {
+      const files = await listFilesInFolder(folder.id);
+      for (const file of files) {
+        const stream = await driveApi.files.get(
+          { fileId: file.id, alt: 'media' },
+          { responseType: 'stream' }
+        );
+        archive.append(stream.data, { name: `${folder.name}/${file.name}` });
+      }
+    }
+
+    await archive.finalize();
+  } catch (err) {
+    console.error('Error creating zip:', err);
+    res.status(500).json({ error: 'Failed to create zip', details: err.message });
+  }
+});
 let sheetsClient;
 async function getSheetsClient() {
   if (!sheetsClient) {

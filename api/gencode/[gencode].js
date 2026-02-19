@@ -52,9 +52,9 @@ export default async function handler(req, res) {
       SP5: 'boardResolution',
       SP6: 'others',
     };
-
     const result = {
       birBusinessRegistration: [],
+      sp2GovernmentId: [],
       secRegistration: [],
       generalInformation: [],
       boardResolution: [],
