@@ -40,6 +40,14 @@ const auth = new google.auth.GoogleAuth({
 });
 
 
+const docLabel = {
+  SP1: 'BIR',
+  SP2: 'GovID',
+  SP3: 'SEC',
+  SP4: 'GIS',
+  SP5: 'BoardRes',
+  SP6: 'Others',
+};
 
 // -----------------------------
 // Helper: list files in a folder
@@ -331,7 +339,9 @@ app.get('/api/download-zip/:gencode', async (req, res) => {
           { fileId: file.id, alt: 'media' },
           { responseType: 'stream' }
         );
-        archive.append(stream.data, { name: `${folder.name}/${file.name}` });
+        // Flat: no subfolder, label prefix to avoid name collisions
+        const flatName = `${docLabel[folder.name] || folder.name}_${file.name}`;
+        archive.append(stream.data, { name: flatName });
       }
     }
 
@@ -341,6 +351,8 @@ app.get('/api/download-zip/:gencode', async (req, res) => {
     res.status(500).json({ error: 'Failed to create zip', details: err.message });
   }
 });
+
+
 let sheetsClient;
 async function getSheetsClient() {
   if (!sheetsClient) {

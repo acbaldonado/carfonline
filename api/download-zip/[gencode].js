@@ -2,6 +2,15 @@ import { getDriveApi } from '../../lib/google-auth.js';
 import { MAIN_FOLDER_ID } from '../../lib/drive-helpers.js';
 import JSZip from 'jszip';
 
+const docLabel = {
+  SP1: 'BIR',
+  SP2: 'GovID',
+  SP3: 'SEC',
+  SP4: 'GIS',
+  SP5: 'BoardRes',
+  SP6: 'Others',
+};
+
 export default async function handler(req, res) {
   // CORS headers
   res.setHeader('Access-Control-Allow-Origin', '*');
@@ -19,7 +28,6 @@ export default async function handler(req, res) {
   try {
     const { gencode } = req.query;
 
-    // ✅ Same helper as the working gencode route
     const driveApi = await getDriveApi();
 
     // Find gencode folder
@@ -56,8 +64,12 @@ export default async function handler(req, res) {
           { responseType: 'arraybuffer' }
         );
 
-        // ✅ Wrap in Buffer for reliable JSZip handling
-        zip.folder(folder.name).file(file.name, Buffer.from(fileRes.data));
+        // Flat file with label prefix to avoid name collisions
+        // zip.folder(folder.name).file(file.name, Buffer.from(fileRes.data));
+        zip.file(
+          `${docLabel[folder.name] || folder.name}_${file.name}`,
+          Buffer.from(fileRes.data)
+        );
       }
     }
 
