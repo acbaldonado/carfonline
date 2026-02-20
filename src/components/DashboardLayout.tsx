@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { Menu, Bell, ChevronDown, User, MessageSquare, Settings, X } from 'lucide-react';
 import CarfSidebar from '@/components/CarfSidebar';
 import CustomerList from '@/components/list/CustomerList';
@@ -50,6 +50,7 @@ const DashboardLayout: React.FC<DashboardLayoutProps> = ({ userEmail, userId, on
   const [showNotifications, setShowNotifications] = useState(false);
   const [hasAuthorization, setHasAuthorization] = useState<boolean>(true);
   const [userGroup, setUserGroup] = useState<string>('');
+  const userMenuRef = useRef<HTMLDivElement>(null);
 
   const isMobile = () => {
     return window.innerWidth < 768;
@@ -84,6 +85,23 @@ const DashboardLayout: React.FC<DashboardLayoutProps> = ({ userEmail, userId, on
 
     fetchUserGroup();
   }, [userEmail]);
+
+
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (userMenuRef.current && !userMenuRef.current.contains(event.target as Node)) {
+        setShowUserMenu(false);
+      }
+    };
+
+    if (showUserMenu) {
+      document.addEventListener('mousedown', handleClickOutside);
+    }
+
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside);
+    };
+  }, [showUserMenu]);
 
   // ✅ Prevent body scroll on mobile - force fixed viewport
   useEffect(() => {
@@ -466,7 +484,7 @@ const DashboardLayout: React.FC<DashboardLayoutProps> = ({ userEmail, userId, on
             </div>
 
             {/* User Avatar + Dropdown */}
-            <div className="relative">
+            <div ref={userMenuRef} className="relative">
               <button
                 onClick={() => setShowUserMenu((prev) => !prev)}
                 className="flex items-center space-x-2 p-1 md:p-2 rounded-full hover:bg-muted transition-colors"
@@ -503,6 +521,16 @@ const DashboardLayout: React.FC<DashboardLayoutProps> = ({ userEmail, userId, on
                       <Settings className="h-4 w-4" /> Settings
                     </button>
                   )}
+
+                  <button
+                    onClick={() => {
+                      setShowUserMenu(false);
+                      onLogout();
+                    }}
+                    className="flex items-center gap-2 px-4 py-2 text-sm text-red-500 hover:bg-muted w-full text-left border-t border-border"
+                  >
+                    <User className="h-4 w-4" /> Logout
+                  </button>
                 </div>
               )}
             </div>

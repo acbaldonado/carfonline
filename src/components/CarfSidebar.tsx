@@ -1,11 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { supabase } from '@/integrations/supabase/client';
-import { 
-  Users, UserCheck, Clock, CheckCircle, 
-  RotateCcw, XCircle, Settings, MapPin,
-  FileText, ChevronDown, ChevronRight
-} from 'lucide-react';
+import * as LucideIcons from 'lucide-react';
 
 interface CarfSidebarProps {
   activeTab: string;
@@ -146,19 +142,9 @@ const CarfSidebar: React.FC<CarfSidebarProps> = ({
 
   // Map string menuicon to actual React icon
   const mapIcon = (iconName: string) => {
-    switch(iconName) {
-      case 'Users': return Users;
-      case 'UserCheck': return UserCheck;
-      case 'Clock': return Clock;
-      case 'CheckCircle': return CheckCircle;
-      case 'RotateCcw': return RotateCcw;
-      case 'XCircle': return XCircle;
-      case 'Settings': return Settings;
-      case 'MapPin': return MapPin;
-      case 'FileText': return FileText;
-      default: return FileText;
-    }
-  };
+  const icon = (LucideIcons as any)[iconName];
+  return icon || LucideIcons.FileText; // fallback to FileText if not found
+};
 
   // Render navigation recursively
   const renderNavItem = (item: any, depth = 0) => {
@@ -187,7 +173,7 @@ const CarfSidebar: React.FC<CarfSidebarProps> = ({
           <span className="truncate">{item.label}</span>
           {hasChildren && (
             <span className="ml-auto flex-shrink-0">
-              {isOpen ? <ChevronDown className="h-3.5 w-3.5 md:h-4 md:w-4" /> : <ChevronRight className="h-3.5 w-3.5 md:h-4 md:w-4" />}
+              {isOpen ? <LucideIcons.ChevronDown className="h-3.5 w-3.5 md:h-4 md:w-4" /> : <LucideIcons.ChevronRight className="h-3.5 w-3.5 md:h-4 md:w-4" />}
             </span>
           )}
         </Button>

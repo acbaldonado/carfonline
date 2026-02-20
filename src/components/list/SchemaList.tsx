@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react';
+import * as LucideIcons from 'lucide-react';
 import {
   Plus, Edit2, Trash2, X, Search, List, GitBranch,
   ChevronRight, ChevronDown, LayoutGrid, FileCode, FolderOpen,
@@ -31,6 +32,11 @@ const TypeBadge = ({ type }: { type: string }) => {
 
 const boolText = (v: boolean) => (v ? 'Yes' : 'No');
 
+// All lucide icon names (only capitalized component names)
+const ALL_LUCIDE_ICONS = Object.keys(LucideIcons).filter(
+  (key) => /^[A-Z]/.test(key) && key !== 'createLucideIcon'
+);
+
 const SelectField = ({ label, value, onChange, options, placeholder, accentClass }: {
   label: string; value: string; onChange: (v: string) => void;
   options: { value: string; label: string }[]; placeholder: string; accentClass?: string;
@@ -60,6 +66,10 @@ export default function SchemaList() {
   const [selectedParentMenu, setSelectedParentMenu] = useState('');
   const [selectedParentSubmenu, setSelectedParentSubmenu] = useState('');
 
+  // Icon picker state
+  const [showIconPicker, setShowIconPicker] = useState(false);
+  const [iconSearch, setIconSearch] = useState('');
+
   const [newSchema, setNewSchema] = useState<Omit<Database['public']['Tables']['schemas']['Insert'], 'itemid'>>({
     menuid: '', menuname: '', menucmd: '', objectcode: '', menutype: 'P', menuicon: '', udfmaintained: false,
   });
@@ -85,7 +95,6 @@ export default function SchemaList() {
   const allSubmenus = schemas.filter((s) => s.menutype === 'S');
   const selectedMenuObj = allMenus.find((m) => String(m.itemid) === selectedParentMenu) ?? null;
   const selectedSubObj = allSubmenus.find((s) => String(s.itemid) === selectedParentSubmenu) ?? null;
-  // Only show submenus that belong to the selected menu (menuid starts with menu's menuid)
   const submenusForSelectedMenu = selectedMenuObj
     ? allSubmenus.filter((s) => s.menuid?.startsWith(selectedMenuObj.menuid || ''))
     : [];
@@ -163,6 +172,100 @@ export default function SchemaList() {
     );
   };
 
+  // ── Icon Picker Modal ──────────────────────────────────────────────────────
+  const IconPicker = () => {
+    const filtered = ALL_LUCIDE_ICONS.filter((name) =>
+      name.toLowerCase().includes(iconSearch.toLowerCase())
+    );
+
+    return (
+      <div className="fixed inset-0 flex items-center justify-center z-[60] bg-black/70 p-4 backdrop-blur-sm">
+        <div className="bg-gray-800 rounded-xl w-full max-w-2xl border border-gray-700 shadow-2xl flex flex-col" style={{ maxHeight: '80vh' }}>
+          {/* Header */}
+          <div className="flex items-center justify-between px-4 py-3 border-b border-gray-700 flex-shrink-0">
+            <h4 className="text-sm font-semibold text-white">Select Icon</h4>
+            <button
+              onClick={() => { setShowIconPicker(false); setIconSearch(''); }}
+              className="text-gray-400 hover:text-white p-1 rounded hover:bg-gray-700 transition-colors"
+            >
+              <X size={16} />
+            </button>
+          </div>
+
+          {/* Search */}
+          <div className="px-4 py-3 border-b border-gray-700 flex-shrink-0">
+            <div className="relative">
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-500" />
+              <input
+                autoFocus
+                type="text"
+                placeholder="Search icons... (e.g. User, Home, Settings)"
+                value={iconSearch}
+                onChange={(e) => setIconSearch(e.target.value)}
+                className="w-full pl-9 pr-3 py-2 rounded-lg bg-gray-700 border border-gray-600 text-white text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+              />
+            </div>
+            <p className="text-xs text-gray-500 mt-1.5">
+              {filtered.length} icon{filtered.length !== 1 ? 's' : ''} found
+              {filtered.length > 200 && ' — showing first 200, refine your search'}
+            </p>
+          </div>
+
+          {/* Icon Grid */}
+          <div className="overflow-y-auto flex-1 p-3">
+            <div className="grid grid-cols-6 sm:grid-cols-8 md:grid-cols-10 gap-1">
+              {filtered.slice(0, 200).map((name) => {
+                const IconComp = (LucideIcons as any)[name];
+                if (!IconComp) return null;
+                const isSelected = newSchema.menuicon === name;
+                return (
+                  <button
+                    key={name}
+                    title={name}
+                    onClick={() => {
+                      setNewSchema((prev) => ({ ...prev, menuicon: name }));
+                      setShowIconPicker(false);
+                      setIconSearch('');
+                    }}
+                    className={`flex flex-col items-center gap-1 p-2 rounded-lg transition-all text-center group ${
+                      isSelected
+                        ? 'bg-blue-600 text-white ring-2 ring-blue-400'
+                        : 'text-gray-400 hover:bg-gray-700 hover:text-white'
+                    }`}
+                  >
+                    <IconComp size={18} />
+                    <span className="text-[9px] leading-tight truncate w-full text-center">{name}</span>
+                  </button>
+                );
+              })}
+            </div>
+          </div>
+
+          {/* Footer — selected icon */}
+          <div className="px-4 py-2.5 border-t border-gray-700 flex items-center gap-3 flex-shrink-0 bg-gray-900/50">
+            {newSchema.menuicon ? (
+              <>
+                {(() => {
+                  const I = (LucideIcons as any)[newSchema.menuicon];
+                  return I ? <I size={16} className="text-blue-400 flex-shrink-0" /> : null;
+                })()}
+                <span className="text-xs text-blue-300 font-mono flex-1">{newSchema.menuicon}</span>
+                <button
+                  onClick={() => setNewSchema((prev) => ({ ...prev, menuicon: '' }))}
+                  className="text-xs text-red-400 hover:text-red-300 transition-colors"
+                >
+                  Clear
+                </button>
+              </>
+            ) : (
+              <span className="text-xs text-gray-500">No icon selected</span>
+            )}
+          </div>
+        </div>
+      </div>
+    );
+  };
+
   // ── Parent selection inside modal ─────────────────────────────────────────
   const renderParentSelection = () => {
     const type = newSchema.menutype;
@@ -181,7 +284,6 @@ export default function SchemaList() {
           onChange={(v) => {
             setSelectedParentMenu(v);
             const parent = allMenus.find((m) => String(m.itemid) === v);
-            // menucmd of the parent menu becomes the menuid of the new submenu
             const resolvedId = parent?.menucmd?.trim() || '';
             setNewSchema((prev) => ({ ...prev, menuid: resolvedId }));
           }}
@@ -209,7 +311,6 @@ export default function SchemaList() {
           <span className="text-xs text-gray-500">— where does this program live?</span>
         </div>
 
-        {/* Step 1 — Pick Menu */}
         <div className="space-y-1">
           <div className="flex items-center gap-1.5 mb-1">
             <span className="w-4 h-4 rounded-full bg-blue-500/20 border border-blue-500/30 flex items-center justify-center text-xs text-blue-300 font-bold flex-shrink-0">1</span>
@@ -222,8 +323,6 @@ export default function SchemaList() {
               setSelectedParentMenu(v);
               setSelectedParentSubmenu('');
               const menu = allMenus.find((m) => String(m.itemid) === v);
-              // Use menuid if it exists and is not null, otherwise fall back to menuname
-              // menucmd of the menu becomes the menuid of the child (submenu/program)
               const resolvedId = menu?.menucmd?.trim() || '';
               setNewSchema((prev) => ({ ...prev, menuid: resolvedId }));
             }}
@@ -233,7 +332,6 @@ export default function SchemaList() {
           />
         </div>
 
-        {/* Step 2 — Pick Submenu (only if this menu HAS submenus) */}
         {selectedMenuObj && submenusForSelectedMenu.length > 0 && (
           <div className="space-y-1">
             <div className="flex items-center gap-1.5 mb-1">
@@ -246,7 +344,6 @@ export default function SchemaList() {
               onChange={(v) => {
                 setSelectedParentSubmenu(v);
                 const sub = submenusForSelectedMenu.find((s) => String(s.itemid) === v);
-                // menucmd of the selected submenu becomes the menuid of the new program
                 const resolvedId = sub?.menucmd?.trim() || '';
                 setNewSchema((prev) => ({ ...prev, menuid: resolvedId }));
               }}
@@ -257,7 +354,6 @@ export default function SchemaList() {
           </div>
         )}
 
-        {/* Breadcrumb preview */}
         {selectedMenuObj && (
           <div className="pt-1 border-t border-emerald-500/10">
             <span className="text-xs text-gray-500 block mb-1.5">Location preview:</span>
@@ -320,7 +416,12 @@ export default function SchemaList() {
                       <div className="grid grid-cols-2 gap-2 text-xs">
                         <div><span className="text-muted-foreground uppercase tracking-wide">Command</span><div className="text-foreground mt-0.5">{schema.menucmd || '-'}</div></div>
                         <div><span className="text-muted-foreground uppercase tracking-wide">Object Code</span><div className="text-foreground mt-0.5">{schema.objectcode || '-'}</div></div>
-                        <div><span className="text-muted-foreground uppercase tracking-wide">Icon</span><div className="text-foreground mt-0.5">{schema.menuicon || '-'}</div></div>
+                        <div><span className="text-muted-foreground uppercase tracking-wide">Icon</span>
+                          <div className="text-foreground mt-0.5 flex items-center gap-1">
+                            {schema.menuicon && (() => { const I = (LucideIcons as any)[schema.menuicon]; return I ? <I size={12} /> : null; })()}
+                            {schema.menuicon || '-'}
+                          </div>
+                        </div>
                         <div><span className="text-muted-foreground uppercase tracking-wide">UDF</span><div className="text-foreground mt-0.5">{boolText(schema.udfmaintained)}</div></div>
                       </div>
                     </CardContent>
@@ -400,7 +501,12 @@ export default function SchemaList() {
                           <td className="px-6 py-3 whitespace-nowrap"><TypeBadge type={schema.menutype} /></td>
                           <td className="px-6 py-3 text-gray-400 whitespace-nowrap font-mono text-sm">{schema.menucmd || '-'}</td>
                           <td className="px-6 py-3 text-gray-400 whitespace-nowrap font-mono text-sm">{schema.objectcode || '-'}</td>
-                          <td className="px-6 py-3 text-gray-400 whitespace-nowrap text-sm">{schema.menuicon || '-'}</td>
+                          <td className="px-6 py-3 text-gray-400 whitespace-nowrap text-sm">
+                            <div className="flex items-center gap-1.5">
+                              {schema.menuicon && (() => { const I = (LucideIcons as any)[schema.menuicon]; return I ? <I size={14} className="text-gray-300" /> : null; })()}
+                              <span>{schema.menuicon || '-'}</span>
+                            </div>
+                          </td>
                           <td className="px-6 py-3 whitespace-nowrap"><span className={`text-xs px-2 py-0.5 rounded-full ${schema.udfmaintained ? 'bg-emerald-500/20 text-emerald-300' : 'bg-gray-700 text-gray-400'}`}>{boolText(schema.udfmaintained)}</span></td>
                           <td className="px-6 py-3 w-28">
                             <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
@@ -414,7 +520,6 @@ export default function SchemaList() {
                 </table>
               </div>
             ) : (
-              /* ── Modern nested tree view ── */
               <div className="flex-1 overflow-auto custom-scrollbar pb-4">
                 {groupKeys.length === 0 ? (
                   <div className="text-center py-12 text-gray-400 bg-gray-800 rounded-lg">No schemas found</div>
@@ -433,7 +538,6 @@ export default function SchemaList() {
 
                   return (
                     <div className="space-y-1 bg-gray-900 rounded-xl border border-gray-700/50 overflow-hidden">
-                      {/* ── Toolbar ── */}
                       <div className="flex items-center justify-between px-4 py-2.5 bg-gray-900 border-b border-gray-700/50">
                         <div className="flex items-center gap-3">
                           {['M','S','P'].map((t) => {
@@ -453,7 +557,6 @@ export default function SchemaList() {
                       </div>
 
                       <div className="p-3 space-y-1">
-                        {/* ══ MENU level ══ */}
                         {menus.map((menu) => {
                           const menuSubs = getSubmenusForMenu(menu.menuid || '');
                           menuSubs.forEach((s) => matchedSubIds.add(s.itemid));
@@ -473,7 +576,9 @@ export default function SchemaList() {
                                     : <ChevronRight size={13} className="text-blue-400" />)}
                                 </div>
                                 <div className="w-7 h-7 rounded-lg bg-blue-500/20 border border-blue-500/30 flex items-center justify-center flex-shrink-0">
-                                  <LayoutGrid size={14} className="text-blue-400" />
+                                  {menu.menuicon && (LucideIcons as any)[menu.menuicon]
+                                    ? (() => { const I = (LucideIcons as any)[menu.menuicon!]; return <I size={14} className="text-blue-400" />; })()
+                                    : <LayoutGrid size={14} className="text-blue-400" />}
                                 </div>
                                 <div className="flex-1 min-w-0">
                                   <div className="flex items-center gap-2">
@@ -496,7 +601,6 @@ export default function SchemaList() {
                                 </div>
                               </div>
 
-                              {/* ══ SUBMENU level ══ */}
                               {isMenuOpen && (
                                 <div className="ml-5 pl-4 border-l-2 border-gray-700/60 space-y-1 my-1">
                                   {menuSubs.map((sub) => {
@@ -517,7 +621,9 @@ export default function SchemaList() {
                                               : <ChevronRight size={12} className="text-yellow-400" />)}
                                           </div>
                                           <div className="w-6 h-6 rounded-md bg-yellow-500/15 border border-yellow-500/25 flex items-center justify-center flex-shrink-0">
-                                            <FolderOpen size={12} className="text-yellow-400" />
+                                            {sub.menuicon && (LucideIcons as any)[sub.menuicon]
+                                              ? (() => { const I = (LucideIcons as any)[sub.menuicon!]; return <I size={12} className="text-yellow-400" />; })()
+                                              : <FolderOpen size={12} className="text-yellow-400" />}
                                           </div>
                                           <div className="flex-1 min-w-0">
                                             <div className="flex items-center gap-2">
@@ -534,7 +640,6 @@ export default function SchemaList() {
                                           </div>
                                         </div>
 
-                                        {/* ══ PROGRAM level ══ */}
                                         {isSubOpen && subProgs.length > 0 && (
                                           <div className="ml-5 pl-4 border-l-2 border-gray-700/40 space-y-0.5 my-1">
                                             {subProgs.map((prog) => (
@@ -543,7 +648,9 @@ export default function SchemaList() {
                                                 className="flex items-center gap-2 px-3 py-1.5 rounded-lg group/prog hover:bg-gray-800/60 transition-colors"
                                               >
                                                 <div className="w-5 h-5 rounded-md bg-emerald-500/10 border border-emerald-500/20 flex items-center justify-center flex-shrink-0">
-                                                  <FileCode size={11} className="text-emerald-400" />
+                                                  {prog.menuicon && (LucideIcons as any)[prog.menuicon]
+                                                    ? (() => { const I = (LucideIcons as any)[prog.menuicon!]; return <I size={11} className="text-emerald-400" />; })()
+                                                    : <FileCode size={11} className="text-emerald-400" />}
                                                 </div>
                                                 <div className="flex-1 min-w-0 flex items-center gap-2">
                                                   <span className="text-emerald-300 text-xs font-mono font-semibold flex-shrink-0">{prog.menuid}</span>
@@ -580,7 +687,6 @@ export default function SchemaList() {
                           <Plus size={12} /> Add Menu
                         </button>
 
-                        {/* ── Orphaned submenus ── */}
                         {submenus.filter((s) => !matchedSubIds.has(s.itemid)).length > 0 && (
                           <div className="mt-3 pt-3 border-t border-gray-700/40">
                             <div className="text-xs text-gray-500 px-3 mb-2 flex items-center gap-2">
@@ -603,7 +709,6 @@ export default function SchemaList() {
                           </div>
                         )}
 
-                        {/* ── Orphaned programs ── */}
                         {programs.filter((p) => !matchedProgIds.has(p.itemid)).length > 0 && (
                           <div className="mt-3 pt-3 border-t border-gray-700/40">
                             <div className="text-xs text-gray-500 px-3 mb-2 flex items-center gap-2">
@@ -682,7 +787,6 @@ export default function SchemaList() {
                   { key: 'menuname', label: 'Menu Name', full: false },
                   { key: 'menucmd', label: 'Menu Command', full: true },
                   { key: 'objectcode', label: 'Object Code', full: false },
-                  { key: 'menuicon', label: 'Menu Icon', full: false },
                 ].map(({ key, label, full }) => (
                   <div key={key} className={full ? 'col-span-2' : ''}>
                     <label className="text-xs text-gray-400 uppercase tracking-wider mb-1 block">{label}</label>
@@ -694,6 +798,32 @@ export default function SchemaList() {
                     />
                   </div>
                 ))}
+
+                {/* Icon Picker Field */}
+                <div>
+                  <label className="text-xs text-gray-400 uppercase tracking-wider mb-1 block">Menu Icon</label>
+                  <button
+                    type="button"
+                    onClick={() => setShowIconPicker(true)}
+                    className="w-full px-3 py-2 rounded-lg bg-gray-700/60 border border-gray-600 text-sm text-left flex items-center gap-2 hover:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-500 transition-colors"
+                  >
+                    {newSchema.menuicon ? (
+                      <>
+                        {(() => { const I = (LucideIcons as any)[newSchema.menuicon]; return I ? <I size={15} className="text-blue-400 flex-shrink-0" /> : null; })()}
+                        <span className="text-white truncate">{newSchema.menuicon}</span>
+                        <button
+                          type="button"
+                          onClick={(e) => { e.stopPropagation(); setNewSchema((prev) => ({ ...prev, menuicon: '' })); }}
+                          className="ml-auto text-gray-500 hover:text-red-400 transition-colors flex-shrink-0"
+                        >
+                          <X size={13} />
+                        </button>
+                      </>
+                    ) : (
+                      <span className="text-gray-500">— Pick an icon —</span>
+                    )}
+                  </button>
+                </div>
               </div>
 
               {/* UDF toggle */}
@@ -709,6 +839,96 @@ export default function SchemaList() {
             <div className="mt-5 flex justify-end gap-2">
               <button onClick={() => setShowModal(false)} className="px-4 py-2 rounded-lg bg-gray-700 hover:bg-gray-600 text-sm transition-colors">Cancel</button>
               <button onClick={handleSave} className="px-4 py-2 rounded-lg bg-blue-600 hover:bg-blue-700 text-sm font-medium transition-colors">{editingSchema ? 'Update' : 'Save'}</button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ═══════════════════ ICON PICKER ═══════════════════ */}
+      {showIconPicker && (
+        <div className="fixed inset-0 flex items-center justify-center z-[60] bg-black/70 p-4 backdrop-blur-sm">
+          <div className="bg-gray-800 rounded-xl w-full max-w-2xl border border-gray-700 shadow-2xl flex flex-col" style={{ maxHeight: '80vh' }}>
+            {/* Header */}
+            <div className="flex items-center justify-between px-4 py-3 border-b border-gray-700 flex-shrink-0">
+              <h4 className="text-sm font-semibold text-white">Select Icon</h4>
+              <button
+                onClick={() => { setShowIconPicker(false); setIconSearch(''); }}
+                className="text-gray-400 hover:text-white p-1 rounded hover:bg-gray-700 transition-colors"
+              >
+                <X size={16} />
+              </button>
+            </div>
+
+            {/* Search */}
+            <div className="px-4 py-3 border-b border-gray-700 flex-shrink-0">
+              <div className="relative">
+                <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-500" />
+                <input
+                  autoFocus
+                  type="text"
+                  placeholder="Search icons... (e.g. User, Home, Settings, Arrow)"
+                  value={iconSearch}
+                  onChange={(e) => setIconSearch(e.target.value)}
+                  className="w-full pl-9 pr-3 py-2 rounded-lg bg-gray-700 border border-gray-600 text-white text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                />
+              </div>
+              <p className="text-xs text-gray-500 mt-1.5">
+                {(() => {
+                  const count = ALL_LUCIDE_ICONS.filter(n => n.toLowerCase().includes(iconSearch.toLowerCase())).length;
+                  return `${count} icon${count !== 1 ? 's' : ''} found${count > 200 ? ' — showing first 200, refine your search' : ''}`;
+                })()}
+              </p>
+            </div>
+
+            {/* Icon Grid */}
+            <div className="overflow-y-auto flex-1 p-3 custom-scrollbar">
+              <div className="grid grid-cols-6 sm:grid-cols-8 md:grid-cols-10 gap-1 ">
+                {ALL_LUCIDE_ICONS
+                  .filter((name) => name.toLowerCase().includes(iconSearch.toLowerCase()))
+                  .slice(0, 200)
+                  .map((name) => {
+                    const IconComp = (LucideIcons as any)[name];
+                    if (!IconComp) return null;
+                    const isSelected = newSchema.menuicon === name;
+                    return (
+                      <button
+                        key={name}
+                        title={name}
+                        onClick={() => {
+                          setNewSchema((prev) => ({ ...prev, menuicon: name }));
+                          setShowIconPicker(false);
+                          setIconSearch('');
+                        }}
+                        className={`flex flex-col items-center gap-1 p-2 rounded-lg transition-all text-center ${
+                          isSelected
+                            ? 'bg-blue-600 text-white ring-2 ring-blue-400 ring-offset-1 ring-offset-gray-800'
+                            : 'text-gray-400 hover:bg-gray-700 hover:text-white'
+                        }`}
+                      >
+                        <IconComp size={18} />
+                        <span className="text-[9px] leading-tight truncate w-full text-center">{name}</span>
+                      </button>
+                    );
+                  })}
+              </div>
+            </div>
+
+            {/* Footer */}
+            <div className="px-4 py-2.5 border-t border-gray-700 flex items-center gap-3 flex-shrink-0 bg-gray-900/50 rounded-b-xl">
+              {newSchema.menuicon ? (
+                <>
+                  {(() => { const I = (LucideIcons as any)[newSchema.menuicon]; return I ? <I size={16} className="text-blue-400 flex-shrink-0" /> : null; })()}
+                  <span className="text-xs text-blue-300 font-mono flex-1">{newSchema.menuicon}</span>
+                  <button
+                    onClick={() => setNewSchema((prev) => ({ ...prev, menuicon: '' }))}
+                    className="text-xs text-red-400 hover:text-red-300 transition-colors"
+                  >
+                    Clear selection
+                  </button>
+                </>
+              ) : (
+                <span className="text-xs text-gray-500">No icon selected</span>
+              )}
             </div>
           </div>
         </div>
