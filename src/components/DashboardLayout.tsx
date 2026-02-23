@@ -31,7 +31,7 @@ import BCApprovalMatrix from './admin-management/BCApprovalMatrix';
 import { useNotifications } from '@/hooks/useNotifications';
 import { formatDistanceToNow } from 'date-fns';
 import { supabase } from '@/integrations/supabase/client';
-
+import CompanyList from './list/CompanyList';
 interface DashboardLayoutProps {
   userEmail: string;
   userId: string | null;
@@ -281,6 +281,8 @@ const DashboardLayout: React.FC<DashboardLayoutProps> = ({ userEmail, userId, on
         return <EXECEMAIL />;
       case 'bcapprovalmatrix':
         return <BCApprovalMatrix />;
+      case 'company':
+        return <CompanyList />;
       case 'customerlist':
       case 'customer-list':
       default:
