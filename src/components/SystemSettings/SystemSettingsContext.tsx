@@ -29,6 +29,7 @@ export const SystemSettingsProvider = ({ children }: { children: React.ReactNode
   useEffect(() => {
     const load = async () => {
       const appEnv = import.meta.env.VITE_APP_ENV || "production";
+      alert(appEnv);
       const { data, error } = await supabase
         .from("system_settings")
         .select("customer_source, sheet_id, sheet_apikey, sheet_range")
