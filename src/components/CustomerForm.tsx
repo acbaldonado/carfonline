@@ -110,6 +110,9 @@ const CustomerForm: React.FC<CustomerFormProps> = ({
   const isApproved = 
     formData.approvestatus === "APPROVED" || 
     (formData.approvestatus === "PENDING" && !userPermissions.hasEditAccess);
+  const currentUserId = ((window as any).getGlobal?.('userid') || '').toString();
+  const isMaker = !!currentUserId && (formData.maker || '').toString() === currentUserId;
+  const canSubmit = isMaker;
 
   const isSoldToParty = formData.ismother.includes('SOLD TO PARTY');
   const normalizeText = (value?: string | null) => (value || '').trim().toLowerCase();
@@ -1934,15 +1937,17 @@ const CustomerForm: React.FC<CustomerFormProps> = ({
                       {isCancelLoading && <Spinner />}
                       {isCancelLoading ? 'Cancelling...' : 'Cancel'}
                     </button>
-                    <button
-                      type="button"
-                      onClick={handleSubmitClick}
-                      disabled={isSubmitLoading}
-                      className="px-4 md:px-6 py-2 bg-green-600 text-white rounded hover:bg-green-700 disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2 text-sm md:text-base"
-                    >
-                      {isSubmitLoading && <Spinner />}
-                      {isSubmitLoading ? 'Submitting...' : 'Submit'}
-                    </button>
+                    {canSubmit && (
+                      <button
+                        type="button"
+                        onClick={handleSubmitClick}
+                        disabled={isSubmitLoading}
+                        className="px-4 md:px-6 py-2 bg-green-600 text-white rounded hover:bg-green-700 disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2 text-sm md:text-base"
+                      >
+                        {isSubmitLoading && <Spinner />}
+                        {isSubmitLoading ? 'Submitting...' : 'Submit'}
+                      </button>
+                    )}
                   </>
                 )}
                 {!isEditMode && (
@@ -2027,15 +2032,17 @@ const CustomerForm: React.FC<CustomerFormProps> = ({
                   {isCancelLoading && <Spinner />}
                   {isCancelLoading ? 'Cancelling...' : 'Cancel'}
                 </button>
-                <button
-                  type="button"
-                  onClick={handleSubmitClick}
-                  disabled={isSubmitLoading}
-                  className="px-4 md:px-6 py-2 bg-green-600 text-white rounded hover:bg-green-700 disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2 text-sm md:text-base"
-                >
-                  {isSubmitLoading && <Spinner />}
-                  {isSubmitLoading ? 'Submitting...' : 'Submit'}
-                </button>
+                {canSubmit && (
+                  <button
+                    type="button"
+                    onClick={handleSubmitClick}
+                    disabled={isSubmitLoading}
+                    className="px-4 md:px-6 py-2 bg-green-600 text-white rounded hover:bg-green-700 disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2 text-sm md:text-base"
+                  >
+                    {isSubmitLoading && <Spinner />}
+                    {isSubmitLoading ? 'Submitting...' : 'Submit'}
+                  </button>
+                )}
                 <button type="button" onClick={onClose} className="px-4 md:px-6 py-2 bg-blue-600 text-white rounded hover:bg-blue-700 text-sm md:text-base">
                   Close
                 </button>
