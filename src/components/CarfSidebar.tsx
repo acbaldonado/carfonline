@@ -26,6 +26,7 @@ const CarfSidebar: React.FC<CarfSidebarProps> = ({
   const [fullName, setFullName] = useState('');
   const [userId, setUserId] = useState<string>('');
   const [navigationItems, setNavigationItems] = useState<any[]>([]);
+  const [userGroup, setUserGroup] = useState<string>('');
 
   const toggleMenu = (id: string) => {
     setOpenMenus(prev => ({ ...prev, [id]: !prev[id] }));
@@ -131,6 +132,9 @@ const CarfSidebar: React.FC<CarfSidebarProps> = ({
         if (onAuthorizationStatus) {
           onAuthorizationStatus(navItems.length > 0);
         }
+
+        // Set user group for conditional rendering
+        setUserGroup(userData.usergroup);
       } catch (error) {
         console.error('Error fetching navigation:', error);
         if (onAuthorizationStatus) onAuthorizationStatus(false);
@@ -218,12 +222,29 @@ const CarfSidebar: React.FC<CarfSidebarProps> = ({
       >
         <nav className="space-y-0.5 md:space-y-1">
           {navigationItems.length > 0 ? (
-            navigationItems.map(item => renderNavItem(item))
-          ) : (
-            <div className="text-gray-400 text-xs md:text-sm text-center py-4">
-              No authorized menu items
-            </div>
-          )}
+            <>
+              {navigationItems.map(item => renderNavItem(item))}
+              {userGroup === 'ADMIN' && (
+                <div className="mt-2">
+                  <Button
+                    variant="ghost"
+                    className="w-full justify-start text-left mb-1 flex items-center text-white py-2 md:py-3 h-auto text-sm md:text-base hover:bg-gray-700 hover:text-[#635e5e]"
+                    onClick={() => {
+                      onTabChange('monthly-themes');
+                      if (onMenuClick) onMenuClick();
+                    }}
+                  >
+                    <LucideIcons.Sun className="h-4 w-4 mr-2" />
+                    <span className="truncate">Monthly Themes</span>
+                  </Button>
+                </div>
+              )}
+            </>
+           ) : (
+             <div className="text-gray-400 text-xs md:text-sm text-center py-4">
+               No authorized menu items
+             </div>
+           )}
         </nav>
       </div>
 
