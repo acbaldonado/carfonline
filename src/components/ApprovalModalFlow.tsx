@@ -581,6 +581,124 @@ const ApprovalFlowModal: React.FC<ApprovalFlowModalProps> = ({ customer, onClose
           opacity: 0.8;
           text-decoration: underline;
         }
+
+        @media (max-width: 768px) {
+          .afm-overlay {
+            padding: 8px;
+          }
+
+          .afm-panel {
+            max-height: 96vh;
+            border-radius: 10px;
+          }
+
+          .afm-header {
+            padding: 14px 14px 12px;
+          }
+
+          .afm-title {
+            font-size: 16px;
+          }
+
+          .afm-tags {
+            gap: 6px;
+            margin-top: 10px;
+          }
+
+          .afm-tag-muted {
+            font-size: 11px;
+            padding: 2px 8px;
+          }
+
+          .afm-body {
+            padding: 14px;
+          }
+
+          .afm-summary {
+            grid-template-columns: 1fr;
+            margin-bottom: 18px;
+          }
+
+          .afm-divider-row {
+            margin-bottom: 14px;
+          }
+
+          .afm-flow {
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+            overflow-x: visible;
+            padding-bottom: 0;
+          }
+
+          .afm-step-unit {
+            width: 100%;
+            flex-direction: column;
+            align-items: stretch;
+            animation: none;
+            opacity: 1;
+          }
+
+          .afm-node {
+            width: 100%;
+            min-width: 0;
+            max-width: none;
+          }
+
+          .afm-arrow {
+            width: 100%;
+            height: 18px;
+          }
+
+          .afm-arrow svg {
+            transform: rotate(90deg);
+          }
+
+          .afm-step-title {
+            font-size: 14px;
+          }
+
+          .afm-step-role,
+          .afm-step-date,
+          .afm-step-person {
+            font-size: 12px;
+          }
+
+          .afm-status-chip {
+            font-size: 11px;
+            padding: 4px 8px;
+          }
+
+          .afm-outcome {
+            margin-top: 16px;
+            padding: 12px 14px;
+          }
+
+          .afm-outcome-icon {
+            font-size: 18px;
+          }
+
+          .afm-outcome-title {
+            font-size: 13px;
+          }
+
+          .afm-outcome-sub {
+            font-size: 12px;
+          }
+
+          .afm-remarks {
+            margin-top: 12px;
+            padding: 10px 12px;
+          }
+
+          .afm-remarks-txt {
+            font-size: 13px;
+          }
+
+          .user-modal-panel {
+            padding: 18px;
+          }
+        }
       `}</style>
 
       <div className={`afm-overlay ${visible ? 'visible' : ''}`} onClick={handleClose}>

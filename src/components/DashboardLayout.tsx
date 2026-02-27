@@ -36,6 +36,7 @@ import CompanyList from './list/CompanyList';
 import ProfilePage from './uploading/ProfilePage';
 import SalesAgentList from './admin-management/SalesAgentList';
 import MonthlyThemes from './admin-management/MonthlyThemes';
+import DashboardHome from './DashboardHome';
 
 interface DashboardLayoutProps {
   userEmail: string;
@@ -44,14 +45,14 @@ interface DashboardLayoutProps {
 }
 
 const DashboardLayout: React.FC<DashboardLayoutProps> = ({ userEmail, userId, onLogout }) => {
-  const [activeTab, setActiveTab] = useState('customer-list');
+  const [activeTab, setActiveTab] = useState('home');
   const [showNewCustomerForm, setShowNewCustomerForm] = useState(false);
   const [showSubmitTicketForm, setShowSubmitTicketForm] = useState(false);
   const [isCollapsed, setIsCollapsed] = useState(true);
   const [editingCustomer, setEditingCustomer] = useState<any | null>(null);
   const [showUserMenu, setShowUserMenu] = useState(false);
   const [showSettings, setShowSettings] = useState(false);
-  const [previousTab, setPreviousTab] = useState<string>('customer-list');
+  const [previousTab, setPreviousTab] = useState<string>('home');
   const [showNotifications, setShowNotifications] = useState(false);
   const [showAllNotifications, setShowAllNotifications] = useState(false);
   const [hasAuthorization, setHasAuthorization] = useState<boolean>(true);
@@ -210,15 +211,9 @@ const DashboardLayout: React.FC<DashboardLayoutProps> = ({ userEmail, userId, on
     }
   };
 
-  const handleNotificationClick = async (notification: any) => {
-    if (!notification.is_read) {
-      await markAsRead(notification.id);
-    }
-    setShowNotifications(false);
-    setShowAllNotifications(false);
-    
-    if (!notification.gencode) {
-      console.error('No gencode in notification');
+  const openCustomerByGencode = async (gencode: string) => {
+    if (!gencode) {
+      console.error('No gencode provided');
       return;
     }
 
@@ -232,7 +227,7 @@ const DashboardLayout: React.FC<DashboardLayoutProps> = ({ userEmail, userId, on
 
       // Fetch customer data by gencode directly from Google Sheets (same pattern as fetchCustomersFromGSheet)
       const googleSheetsUrl = `https://sheets.googleapis.com/v4/spreadsheets/${sheetId}/values/${sheetRange}?key=${sheetApiKey}`;
-      console.log('Fetching from Google Sheets for gencode:', notification.gencode);
+      console.log('Fetching from Google Sheets for gencode:', gencode);
       console.log('URL:', googleSheetsUrl);
       
       const response = await fetch(googleSheetsUrl);
@@ -267,15 +262,15 @@ const DashboardLayout: React.FC<DashboardLayoutProps> = ({ userEmail, userId, on
         return customer;
       });
 
-      // Find the customer matching the notification gencode
+      // Find the customer matching the gencode
       const customerData = sheetCustomers.find(
         (customer) =>
-          (customer.gencode || '').toString().trim() === notification.gencode.toString().trim()
+          (customer.gencode || '').toString().trim() === gencode.toString().trim()
       );
 
       if (!customerData) {
-        console.error(`Customer with gencode ${notification.gencode} not found`);
-        alert(`Customer ${notification.gencode} not found`);
+        console.error(`Customer with gencode ${gencode} not found`);
+        alert(`Customer ${gencode} not found`);
         return;
       }
 
@@ -287,7 +282,7 @@ const DashboardLayout: React.FC<DashboardLayoutProps> = ({ userEmail, userId, on
         setEditingCustomer(customerData);
         setPreviousTab(activeTab);
         setShowNewCustomerForm(true);
-        console.log('✅ Opened form for CARF:', notification.gencode);
+        console.log('✅ Opened form for CARF:', gencode);
       } else {
         console.error('No customer data found');
         alert('Could not find customer data');
@@ -296,6 +291,20 @@ const DashboardLayout: React.FC<DashboardLayoutProps> = ({ userEmail, userId, on
       console.error('Error navigating to customer:', err);
       alert('Error opening customer form: ' + (err instanceof Error ? err.message : String(err)));
     }
+  };
+
+  const handleNotificationClick = async (notification: any) => {
+    if (!notification.is_read) {
+      await markAsRead(notification.id);
+    }
+    setShowNotifications(false);
+    setShowAllNotifications(false);
+    
+    if (!notification.gencode) {
+      console.error('No gencode in notification');
+      return;
+    }
+    await openCustomerByGencode(notification.gencode.toString());
   };
 
   const getNotificationIcon = (type: string) => {
@@ -351,24 +360,23 @@ const DashboardLayout: React.FC<DashboardLayoutProps> = ({ userEmail, userId, on
       return <SubmitTicketForm onBack={handleBackToCustomerList} onSuccess={handleBackToCustomerList} />;
     }
 
-    if (showNewCustomerForm) {
-      return (
-        <NewCustomerForm
-          dialogVisible={showNewCustomerForm}
-          onClose={handleBackToCustomerList}
-          onSubmit={(data) => {
-            handleBackToCustomerList();
-          }}
-          initialData={editingCustomer}
-        />
-      );
-    }
-
     if (!hasAuthorization) {
       return <UnauthorizedAccess />;
     }
 
     switch (activeTab) {
+      case 'home':
+        return (
+          <DashboardHome
+            userId={userId}
+            totalNotifications={notifications.length}
+            unreadNotifications={unreadCount}
+            notifications={notifications}
+            onOpenCustomerByGencode={openCustomerByGencode}
+            onNotificationClick={handleNotificationClick}
+            onNavigateTab={handleTabChange}
+          />
+        );
       case 'approved':
         return <ApprovedCustomerList onEditCustomer={handleEditCustomer} />;
       case 'returntomaker':
@@ -479,7 +487,7 @@ const DashboardLayout: React.FC<DashboardLayoutProps> = ({ userEmail, userId, on
             </button>
             <h2
               onClick={() => {
-                setActiveTab('customer-list');
+                setActiveTab('home');
                 setShowNewCustomerForm(false);
                 setShowSubmitTicketForm(false);
                 setShowProfile(false);
@@ -697,7 +705,7 @@ const DashboardLayout: React.FC<DashboardLayoutProps> = ({ userEmail, userId, on
                       setShowUserMenu(false);
                       onLogout();
                     }}
-                    className="flex items-center gap-2 px-4 py-2 text-sm text-red-500 hover:bg-muted w-full text-left border-t border-border"
+                    className="flex items-center gap-2 px-4 py-2.5 text-sm font-semibold text-foreground bg-amber-50/80 hover:bg-amber-100 dark:bg-amber-950/30 dark:hover:bg-amber-900/40 w-full text-left border-t border-border"
                   >
                     <User className="h-4 w-4" /> Logout
                   </button>
@@ -828,6 +836,18 @@ const DashboardLayout: React.FC<DashboardLayoutProps> = ({ userEmail, userId, on
               </div>
             </div>
           </div>
+        )}
+
+        {/* Customer Form Modal (keep page mounted behind to avoid dashboard reset) */}
+        {showNewCustomerForm && (
+          <NewCustomerForm
+            dialogVisible={showNewCustomerForm}
+            onClose={handleBackToCustomerList}
+            onSubmit={() => {
+              handleBackToCustomerList();
+            }}
+            initialData={editingCustomer}
+          />
         )}
       </div>
     </div>
